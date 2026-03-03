@@ -73,7 +73,7 @@ def train_synthesizer(
 
     synthesizer = _create_synthesizer(
         model_type=model_type,
-        metadata=metadata
+        metadata=metadata,
         **model_kwargs,
     )
 
@@ -125,9 +125,16 @@ def evaluate_synthetic_quality(
         metadata=metadata,
     )
 
+    properties = report.get_properties()
+
+    details = {}
+    for prop in properties["Property"]:
+        details[prop] = report.get_details(prop).to_dict()
+
     results = {
         "overall_score": report.get_score(),
-        "details": report.get_details().to_dict(),
+        "properties": properties.to_dict(),
+        "details": details,
     }
 
     return results

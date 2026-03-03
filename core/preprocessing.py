@@ -134,12 +134,44 @@ def one_hot_encode(
         df_copy,
         columns=columns,
         drop_first=drop_first,
+        dtype=int,
     )
 
     config = {
         "operation": "one_hot_encode",
         "columns": columns,
         "drop_first": drop_first,
+    }
+
+    return df_copy, config
+
+def encode_classes(
+    df: pd.DataFrame,
+    column: str,
+) -> Tuple[pd.DataFrame, Dict]:
+    """
+    Encode categorical class labels in a column into integers.
+
+    Returns:
+        - Transformed DataFrame
+        - Config containing mapping
+    """
+
+    if column not in df.columns:
+        raise ValueError(f"Column '{column}' not found.")
+
+    df_copy = df.copy()
+
+    categories = df_copy[column].astype("category").cat.categories.tolist()
+
+    mapping = {category: idx for idx, category in enumerate(categories)}
+
+    df_copy[column] = df_copy[column].map(mapping)
+
+    config = {
+        "operation": "encode_classes",
+        "column": column,
+        "mapping": mapping,
     }
 
     return df_copy, config
