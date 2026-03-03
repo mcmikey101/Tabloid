@@ -119,7 +119,7 @@ class VersionManager:
 
         # Remove file
         versions_path = self.file_store.get_versions_path(dataset_name)
-        version_file = versions_path / f"{version_name}.parquet"
+        version_file = versions_path / f"{version_name}.pkl"
         if version_file.exists():
             version_file.unlink()
 

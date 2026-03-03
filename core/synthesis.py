@@ -129,7 +129,8 @@ def evaluate_synthetic_quality(
 
     details = {}
     for prop in properties["Property"]:
-        details[prop] = report.get_details(prop).to_dict()
+        details[prop] = report.get_details(prop)
+        details[prop] = details[prop].replace({float("nan"): None}).to_dict()
 
     results = {
         "overall_score": report.get_score(),

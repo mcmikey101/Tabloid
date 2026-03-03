@@ -78,5 +78,5 @@ Thumbs.db
 .env.*
 
 data/
-test.ipynb
+test.py
 *.csv
