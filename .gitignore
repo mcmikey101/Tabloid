@@ -80,3 +80,4 @@ Thumbs.db
 data/
 test.py
 *.csv
+*.ipynb
