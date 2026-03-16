@@ -95,6 +95,13 @@ class VersionManager:
 
         lineage.reverse()
         return lineage
+    
+    def get_version_graph(self, dataset_name: str) -> Dict[str, Optional[str]]:
+        """
+        Returns a mapping of version to its parent for graph construction.
+        """
+        meta = self._load_versions_meta(dataset_name)
+        return {v: info["parent"] for v, info in meta.items()}
 
     def delete_version(
         self,

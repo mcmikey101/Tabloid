@@ -6,8 +6,12 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QSplitter,
     QPushButton,
-    QLabel
+    QLabel,
+    QFileDialog,
+    QInputDialog,
+    QMessageBox
 )
+
 from PySide6.QtCore import Qt
 
 from ui.widgets.dataset_list import DatasetListWidget
@@ -16,57 +20,56 @@ from ui.widgets.data_table import DataTableWidget
 from ui.widgets.column_stats import ColumnStatsWidget
 from ui.widgets.distribution_plot import DistributionPlotWidget
 
+from storage.file_store import FileStore
+from core.dataset_manager import DatasetManager
+from core.version_manager import VersionManager
+from core.metadata import derive_metadata
+
 
 class DatasetsPage(QWidget):
-    """
-    Main workspace for dataset exploration and version management.
-    Layout:
-
-    ---------------------------------------------------------
-    Top Bar: [Dataset] [Version]             [Operations][Synthesize]
-    ---------------------------------------------------------
-    Left Panel      | Center Panel           | Right Panel
-    Dataset List    | Data Table             | Version Tree
-                    | Column Stats           |
-                    | Distribution Plot      |
-    ---------------------------------------------------------
-    """
 
     def __init__(self):
         super().__init__()
+        
+        self.file_store = FileStore()
+        self.version_manager = VersionManager(file_store=self.file_store)
+        self.dataset_manager = DatasetManager(version_manager=self.version_manager, file_store=self.file_store)
+
+        self.current_dataset = None
+        self.current_version = None
+        self.current_df = None
+
         self._build_ui()
+        self._connect_signals()
+        self._load_datasets()
 
     # -----------------------------------------------------
-    # UI Construction
+    # UI
     # -----------------------------------------------------
 
     def _build_ui(self):
         root_layout = QVBoxLayout(self)
 
-        # Top controls
         top_bar = self._create_top_bar()
         root_layout.addLayout(top_bar)
 
-        # Main workspace
         splitter = QSplitter(Qt.Horizontal)
 
-        # Left: dataset list
         self.dataset_list = DatasetListWidget()
         splitter.addWidget(self.dataset_list)
 
-        # Center: data table + analytics
         center_widget = self._create_center_panel()
         splitter.addWidget(center_widget)
 
-        # Right: version tree
         self.version_tree = VersionTreeWidget()
         splitter.addWidget(self.version_tree)
 
-        splitter.setSizes([200, 800, 300])
+        splitter.setSizes([250, 900, 300])
 
         root_layout.addWidget(splitter)
 
     def _create_top_bar(self):
+
         layout = QHBoxLayout()
 
         self.dataset_label = QLabel("Dataset: None")
@@ -86,16 +89,12 @@ class DatasetsPage(QWidget):
         return layout
 
     def _create_center_panel(self):
+
         center = QWidget()
         layout = QVBoxLayout(center)
 
-        # Data table
         self.data_table = DataTableWidget()
-
-        # Column statistics
         self.column_stats = ColumnStatsWidget()
-
-        # Distribution plot
         self.distribution_plot = DistributionPlotWidget()
 
         layout.addWidget(self.data_table)
@@ -105,21 +104,111 @@ class DatasetsPage(QWidget):
         return center
 
     # -----------------------------------------------------
-    # Future interaction hooks
+    # Signals
     # -----------------------------------------------------
 
-    def load_dataset(self, dataset_name: str):
-        """Load dataset into UI components."""
-        pass
+    def _connect_signals(self):
 
-    def load_version(self, version_name: str):
-        """Load selected dataset version."""
-        pass
+        self.dataset_list.dataset_selected.connect(self.load_dataset)
+        self.dataset_list.add_dataset_requested.connect(self.add_dataset)
 
-    def apply_operations(self):
-        """Open preprocessing operations dialog."""
-        pass
+        self.version_tree.version_selected.connect(self.load_version)
 
-    def run_synthesis(self):
-        """Open synthesis configuration dialog."""
-        pass
+        self.data_table.column_selected.connect(self.update_column_stats)
+
+    # -----------------------------------------------------
+    # Dataset Loading
+    # -----------------------------------------------------
+
+    def _load_datasets(self):
+
+        datasets = self.dataset_manager.list_datasets()
+        self.dataset_list.set_datasets(datasets)
+
+    def load_dataset(self, dataset_name):
+
+        self.current_dataset = dataset_name
+        self.dataset_label.setText(f"Dataset: {dataset_name}")
+
+        version_graph = self.version_manager.get_version_graph(dataset_name)
+
+        self.version_tree.load_versions(version_graph)
+
+    # -----------------------------------------------------
+    # Version Loading
+    # -----------------------------------------------------
+
+    def load_version(self, version_name):
+
+        if not self.current_dataset:
+            return
+
+        df = self.dataset_manager.load_version(
+            dataset_name=self.current_dataset,
+            version_name=version_name
+        )
+
+        self.current_version = version_name
+        self.current_df = df
+
+        self.version_label.setText(f"Version: {version_name}")
+
+        self.data_table.load_dataframe(df)
+        self.distribution_plot.load_dataframe(df)
+
+    # -----------------------------------------------------
+    # Column Statistics
+    # -----------------------------------------------------
+
+    def update_column_stats(self, column_name):
+
+        if self.current_df is None:
+            return
+
+        metadata = derive_metadata(self.current_df)
+
+        stats = metadata["columns"].get(column_name, {})
+
+        self.column_stats.display_stats(stats)
+
+    # -----------------------------------------------------
+    # Dataset Import
+    # -----------------------------------------------------
+
+    def add_dataset(self):
+
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select dataset file",
+            "",
+            "Data files (*.csv *.xlsx)"
+        )
+
+        if not file_path:
+            return
+
+        dataset_name, ok = QInputDialog.getText(
+            self,
+            "Dataset Name",
+            "Enter dataset name:"
+        )
+
+        if not ok or not dataset_name:
+            return
+
+        try:
+
+            self.dataset_manager.create_dataset(
+                dataset_name=dataset_name,
+                file_path=file_path
+            )
+
+            self._load_datasets()
+
+        except Exception as e:
+
+            QMessageBox.critical(
+                self,
+                "Import Error",
+                str(e)
+            )
