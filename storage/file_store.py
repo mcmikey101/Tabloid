@@ -48,6 +48,9 @@ class FileStore:
     def get_dataset_path(self, dataset_name: str) -> Path:
         return self.base_path / dataset_name
     
+    def get_versions_path(self, dataset_name: str) -> Path:
+        return self.get_dataset_path(dataset_name) / "versions"
+    
 
     # ------------------------------------------------------------------
     # Version Storage (Pickle)
@@ -75,6 +78,15 @@ class FileStore:
             )
 
         return pd.read_pickle(version_path)
+
+    def delete_version(
+        self,
+        dataset_name: str,
+        version_name: str,
+    ) -> None:
+        version_path = self._version_file_path(dataset_name, version_name)
+        if version_path.exists():
+            version_path.unlink()
 
     def list_versions(self, dataset_name: str) -> List[str]:
         versions_path = self._dataset_path(dataset_name) / "versions"

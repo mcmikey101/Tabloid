@@ -42,5 +42,21 @@ class VersionTreeWidget(QWidget):
             else:
                 nodes[parent].addChild(item)
 
+    def select_version(self, version_name):
+        """Select the item with the given version name."""
+        def find_item(items):
+            for item in items:
+                if item.text(0) == version_name:
+                    return item
+                # Recursively search children
+                found = find_item([item.child(i) for i in range(item.childCount())])
+                if found:
+                    return found
+            return None
+
+        item = find_item([self.tree.topLevelItem(i) for i in range(self.tree.topLevelItemCount())])
+        if item:
+            self.tree.setCurrentItem(item)
+
     def _on_item_clicked(self, item):
         self.version_selected.emit(item.text(0))

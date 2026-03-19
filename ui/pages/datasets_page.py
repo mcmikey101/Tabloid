@@ -19,6 +19,7 @@ from ui.widgets.version_tree import VersionTreeWidget
 from ui.widgets.data_table import DataTableWidget
 from ui.widgets.column_stats import ColumnStatsWidget
 from ui.widgets.distribution_plot import DistributionPlotWidget
+from ui.dialogs.operations_dialog import OperationsDialog
 
 from storage.file_store import FileStore
 from core.dataset_manager import DatasetManager
@@ -55,14 +56,16 @@ class DatasetsPage(QWidget):
 
         splitter = QSplitter(Qt.Horizontal)
 
-        self.dataset_list = DatasetListWidget()
-        splitter.addWidget(self.dataset_list)
+        # Dataset list with delete button
+        dataset_widget = self._create_dataset_section()
+        splitter.addWidget(dataset_widget)
 
         center_widget = self._create_center_panel()
         splitter.addWidget(center_widget)
 
-        self.version_tree = VersionTreeWidget()
-        splitter.addWidget(self.version_tree)
+        # Version tree with delete button
+        version_widget = self._create_version_section()
+        splitter.addWidget(version_widget)
 
         splitter.setSizes([250, 900, 300])
 
@@ -103,6 +106,32 @@ class DatasetsPage(QWidget):
 
         return center
 
+    def _create_dataset_section(self):
+        """Create dataset list section with delete button."""
+        container = QWidget()
+        layout = QVBoxLayout(container)
+
+        self.dataset_list = DatasetListWidget()
+        layout.addWidget(self.dataset_list)
+
+        self.delete_dataset_btn = QPushButton("Delete Dataset")
+        layout.addWidget(self.delete_dataset_btn)
+
+        return container
+
+    def _create_version_section(self):
+        """Create version tree section with delete button."""
+        container = QWidget()
+        layout = QVBoxLayout(container)
+
+        self.version_tree = VersionTreeWidget()
+        layout.addWidget(self.version_tree)
+
+        self.delete_version_btn = QPushButton("Delete Version")
+        layout.addWidget(self.delete_version_btn)
+
+        return container
+
     # -----------------------------------------------------
     # Signals
     # -----------------------------------------------------
@@ -115,6 +144,10 @@ class DatasetsPage(QWidget):
         self.version_tree.version_selected.connect(self.load_version)
 
         self.data_table.column_selected.connect(self.update_column_stats)
+
+        self.operations_btn.clicked.connect(self.open_operations_dialog)
+        self.delete_version_btn.clicked.connect(self.delete_current_version)
+        self.delete_dataset_btn.clicked.connect(self.delete_current_dataset)
 
     # -----------------------------------------------------
     # Dataset Loading
@@ -133,6 +166,11 @@ class DatasetsPage(QWidget):
         version_graph = self.version_manager.get_version_graph(dataset_name)
 
         self.version_tree.load_versions(version_graph)
+
+        # Automatically select the raw version if it exists
+        if "raw" in version_graph:
+            self.version_tree.select_version("raw")
+            self.load_version("raw")
 
     # -----------------------------------------------------
     # Version Loading
@@ -211,4 +249,178 @@ class DatasetsPage(QWidget):
                 self,
                 "Import Error",
                 str(e)
+            )
+
+    # -----------------------------------------------------
+    # Operations
+    # -----------------------------------------------------
+
+    def open_operations_dialog(self):
+        """Open the operations builder dialog."""
+        if not self.current_dataset or self.current_df is None:
+            QMessageBox.warning(
+                self,
+                "Warning",
+                "Please load a dataset and version first."
+            )
+            return
+
+        dialog = OperationsDialog(self)
+        dialog.set_dataframe(self.current_df)
+
+        if dialog.exec() == OperationsDialog.Accepted:
+            result_df, result_config = dialog.get_results()
+
+            if result_df is None:
+                return
+
+            # Ask for version name
+            version_name, ok = QInputDialog.getText(
+                self,
+                "Save Version",
+                "Enter new version name:"
+            )
+
+            if not ok or not version_name:
+                return
+
+            try:
+                # Save as new version
+                self.version_manager.create_version(
+                    dataset_name=self.current_dataset,
+                    version_name=version_name,
+                    df=result_df,
+                    parent_version=self.current_version,
+                    operation="operations_sequence",
+                    config=result_config
+                )
+
+                # Reload version tree
+                self.load_dataset(self.current_dataset)
+
+                # Auto-select the new version
+                self.version_tree.select_version(version_name)
+                self.load_version(version_name)
+
+                QMessageBox.information(
+                    self,
+                    "Success",
+                    f"Version '{version_name}' created successfully!"
+                )
+
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    "Error",
+                    f"Failed to save version: {str(e)}"
+                )
+
+    # -----------------------------------------------------
+    # Delete Operations
+    # -----------------------------------------------------
+
+    def delete_current_version(self):
+        """Delete the current version."""
+        if not self.current_dataset or not self.current_version:
+            QMessageBox.warning(
+                self,
+                "Warning",
+                "Please select a version to delete."
+            )
+            return
+
+        if self.current_version == "raw":
+            QMessageBox.warning(
+                self,
+                "Warning",
+                "Cannot delete the 'raw' version."
+            )
+            return
+
+        reply = QMessageBox.question(
+            self,
+            "Confirm Delete",
+            f"Delete version '{self.current_version}'?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        try:
+
+            temp_current_version = self.current_version
+
+            self.version_manager.delete_version(
+                self.current_dataset,
+                self.current_version
+            )
+
+            # Reload version tree
+            self.load_dataset(self.current_dataset)
+
+            QMessageBox.information(
+                self,
+                "Success",
+                f"Version '{temp_current_version}' deleted successfully!"
+            )
+
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"Failed to delete version: {str(e)}"
+            )
+
+    def delete_current_dataset(self):
+        """Delete the current dataset."""
+        if not self.current_dataset:
+            QMessageBox.warning(
+                self,
+                "Warning",
+                "Please select a dataset to delete."
+            )
+            return
+
+        reply = QMessageBox.question(
+            self,
+            "Confirm Delete",
+            f"Delete dataset '{self.current_dataset}' and all its versions?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        try:
+            dataset_name = self.current_dataset
+            self.dataset_manager.delete_dataset(dataset_name)
+
+            # Reset current dataset
+            self.current_dataset = None
+            self.current_version = None
+            self.current_df = None
+
+            # Reload datasets
+            self._load_datasets()
+
+            self.dataset_label.setText("Dataset: None")
+            self.version_label.setText("Version: None")
+            self.data_table.table.setRowCount(0)
+            self.distribution_plot.column_selector.clear()
+            self.distribution_plot.figure.clear()
+            self.distribution_plot.canvas.draw()
+            self.version_tree.tree.clear()
+
+            QMessageBox.information(
+                self,
+                "Success",
+                f"Dataset '{dataset_name}' deleted successfully!"
+            )
+
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"Failed to delete dataset: {str(e)}"
             )

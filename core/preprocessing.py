@@ -76,6 +76,20 @@ def drop_columns(
 
     return df_copy, config
 
+def drop_high_corr_features(df, threshold=0.8):
+    corr = df.corr(numeric_only=True).abs()
+    upper = corr.where(~pd.np.tril(pd.np.ones(corr.shape)).astype(bool))
+    
+    to_drop = [col for col in upper.columns if any(upper[col] > threshold)]
+
+    config = {
+        "operation": "drop_high_corr_features",
+        "threshold": threshold,
+        "dropped_columns": to_drop,
+    }
+    
+    return df.drop(columns=to_drop), config
+
 
 # ----------------------------------------------------------------------
 # Standard Scaling

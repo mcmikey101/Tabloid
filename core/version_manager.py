@@ -124,11 +124,8 @@ class VersionManager:
                     f"because it has child version '{v}'."
                 )
 
-        # Remove file
-        versions_path = self.file_store.get_versions_path(dataset_name)
-        version_file = versions_path / f"{version_name}.pkl"
-        if version_file.exists():
-            version_file.unlink()
+        # Remove version file using file_store
+        self.file_store.delete_version(dataset_name, version_name)
 
         # Remove metadata
         del meta[version_name]
