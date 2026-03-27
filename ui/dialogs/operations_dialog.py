@@ -41,6 +41,11 @@ class OperationsDialog(QDialog):
             "requires_columns": True,
             "params": [],
         },
+        "drop_outliers": {
+            "name": "Drop Outliers",
+            "requires_columns": True,
+            "params": ["method", "threshold"],
+        },
         "drop_high_corr_features": {
             "name": "Drop High Corr Features",
             "requires_columns": False,
@@ -210,7 +215,7 @@ class OperationsDialog(QDialog):
             config["strategy"] = strategy
 
         if "threshold" in operation_info["params"]:
-            threshold, ok = self._get_float_input("Correlation Threshold:", 0.8)
+            threshold, ok = self._get_float_input("Threshold:", 0.8)
             if not ok:
                 return None
             config["threshold"] = threshold
@@ -218,6 +223,15 @@ class OperationsDialog(QDialog):
         if "drop_first" in operation_info["params"]:
             drop_first = self._get_bool_input("Drop first category?")
             config["drop_first"] = drop_first
+
+        if "method" in operation_info["params"]:
+            methods = ["iqr", "z_score"]
+            method, ok = self._select_from_list(
+                methods, "Select Outlier Detection Method:"
+            )
+            if not ok:
+                return None
+            config["method"] = method 
 
         return config
 
@@ -400,9 +414,12 @@ class OperationsDialog(QDialog):
         result_df = self.input_df.copy()
         operations_configs = []
 
-        for op in self.operations_sequence:
-            result_df, config = self._apply_operation(result_df, op)
-            operations_configs.append(config)
+        try:
+            for op in self.operations_sequence:
+                result_df, config = self._apply_operation(result_df, op)
+                operations_configs.append(config)
+        except Exception as e:
+            raise Exception(f"Error during preprocessing: {str(e)}")
 
         self.result_df = result_df
         self.result_config = {
@@ -427,6 +444,13 @@ class OperationsDialog(QDialog):
         elif operation_id == "drop_high_corr_features":
             return preprocessing.drop_high_corr_features(
                 df, threshold=config.get("threshold", 0.8)
+            )
+        elif operation_id == "drop_outliers":
+            return preprocessing.drop_outliers(
+                df,
+                columns=config.get("columns"),
+                method=config.get("method", "iqr"),
+                threshold=config.get("threshold", 1.5),
             )
         elif operation_id == "standard_scale":
             return preprocessing.standard_scale(df, columns=config["columns"])

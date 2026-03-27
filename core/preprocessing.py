@@ -2,6 +2,8 @@
 
 from typing import Dict, List, Tuple, Optional
 
+import numpy as np
+
 import pandas as pd
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
@@ -58,6 +60,56 @@ def handle_missing_values(
     return df_copy, config
 
 
+# drop outliers
+
+def drop_outliers(df: pd.DataFrame, columns: list = None, method: str = "iqr", threshold: float = 1.5):
+    """
+    Drop rows containing outliers in specified columns.
+    
+    Args:
+        df: Input dataframe
+        columns: List of columns to check for outliers. If None, uses all numeric columns
+        method: Method for outlier detection ("iqr" or "zscore")
+        threshold: IQR multiplier (1.5) or zscore threshold (3)
+    
+    Returns:
+        df_copy: DataFrame with outliers removed
+        config: Configuration dictionary
+    """
+    df_copy = df.copy()
+    
+    if columns is None:
+        columns = df_copy.select_dtypes(include=['number']).columns.tolist()
+    
+    rows_before = len(df_copy)
+    
+    if method == "iqr":
+        for col in columns:
+            if col in df_copy.columns:
+                Q1 = df_copy[col].quantile(0.25)
+                Q3 = df_copy[col].quantile(0.75)
+                IQR = Q3 - Q1
+                lower_bound = Q1 - threshold * IQR
+                upper_bound = Q3 + threshold * IQR
+                df_copy = df_copy[(df_copy[col] >= lower_bound) & (df_copy[col] <= upper_bound)]
+    
+    elif method == "zscore":
+        from scipy import stats
+        for col in columns:
+            if col in df_copy.columns:
+                z_scores = stats.zscore(df_copy[col].dropna())
+                df_copy = df_copy[(stats.zscore(df_copy[col].fillna(df_copy[col].mean())).abs() <= threshold)]
+    
+    rows_after = len(df_copy)
+    
+    config = {
+        "operation": "drop_outliers",
+        "method": method,
+        "columns": columns,
+        "rows_removed": rows_before - rows_after,
+    }
+    
+    return df_copy, config
 # ----------------------------------------------------------------------
 # Drop Columns
 # ----------------------------------------------------------------------
@@ -78,7 +130,7 @@ def drop_columns(
 
 def drop_high_corr_features(df, threshold=0.8):
     corr = df.corr(numeric_only=True).abs()
-    upper = corr.where(~pd.np.tril(pd.np.ones(corr.shape)).astype(bool))
+    upper = corr.where(~np.tril(np.ones(corr.shape)).astype(bool))
     
     to_drop = [col for col in upper.columns if any(upper[col] > threshold)]
 

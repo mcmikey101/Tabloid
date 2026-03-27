@@ -20,12 +20,12 @@ from ui.widgets.data_table import DataTableWidget
 from ui.widgets.column_stats import ColumnStatsWidget
 from ui.widgets.distribution_plot import DistributionPlotWidget
 from ui.dialogs.operations_dialog import OperationsDialog
+from ui.dialogs.synthesis_dialog import SynthesisDialog
 
 from storage.file_store import FileStore
 from core.dataset_manager import DatasetManager
 from core.version_manager import VersionManager
 from core.metadata import derive_metadata
-
 
 class DatasetsPage(QWidget):
 
@@ -83,7 +83,7 @@ class DatasetsPage(QWidget):
 
         layout.addStretch()
 
-        self.operations_btn = QPushButton("Operations")
+        self.operations_btn = QPushButton("Preprocessing")
         self.synthesize_btn = QPushButton("Synthesize")
 
         layout.addWidget(self.operations_btn)
@@ -148,6 +148,62 @@ class DatasetsPage(QWidget):
         self.operations_btn.clicked.connect(self.open_operations_dialog)
         self.delete_version_btn.clicked.connect(self.delete_current_version)
         self.delete_dataset_btn.clicked.connect(self.delete_current_dataset)
+        self.synthesize_btn.clicked.connect(self.open_synthesis_dialog)
+
+    def open_synthesis_dialog(self):
+        """Open the operations builder dialog."""
+        if not self.current_dataset or self.current_df is None:
+            QMessageBox.warning(
+                self,
+                "Warning",
+                "Please load a dataset and version first."
+            )
+            return
+
+        dialog = SynthesisDialog(self)
+        dialog.set_dataframe(self.current_df)
+
+        if dialog.exec() == SynthesisDialog.Accepted:
+            result_df, result_config = dialog.get_results()
+            if result_df is None:
+                return
+            
+            # Ask for version name
+            version_name, ok = QInputDialog.getText(
+                self,
+                "Save Version",
+                "Enter new version name:"
+            )
+            if not ok or not version_name:
+                return
+            
+            try:
+                # Save as new version
+                self.version_manager.create_version(
+                    dataset_name=self.current_dataset,
+                    version_name=version_name,
+                    df=result_df,
+                    parent_version=self.current_version,
+                    operation="synthesis",
+                    config=result_config
+                )
+                # Reload and display
+                self.load_dataset(self.current_dataset)
+                self.version_tree.select_version(version_name)
+                self.load_version(version_name)
+                QMessageBox.information(
+                    self,
+                    "Success",
+                    f"Synthetic version '{version_name}' created!"
+                )
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    "Error",
+                    f"Failed to save version: {str(e)}"
+                )
+
+    
 
     # -----------------------------------------------------
     # Dataset Loading
