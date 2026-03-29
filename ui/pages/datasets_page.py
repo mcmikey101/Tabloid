@@ -85,9 +85,11 @@ class DatasetsPage(QWidget):
 
         self.operations_btn = QPushButton("Preprocessing")
         self.synthesize_btn = QPushButton("Synthesize")
+        self.export_btn = QPushButton("Export")
 
         layout.addWidget(self.operations_btn)
         layout.addWidget(self.synthesize_btn)
+        layout.addWidget(self.export_btn)
 
         return layout
 
@@ -149,6 +151,62 @@ class DatasetsPage(QWidget):
         self.delete_version_btn.clicked.connect(self.delete_current_version)
         self.delete_dataset_btn.clicked.connect(self.delete_current_dataset)
         self.synthesize_btn.clicked.connect(self.open_synthesis_dialog)
+        self.export_btn.clicked.connect(self.export_version)
+
+    def export_version(self):
+        # Ask for format
+        formats = ["CSV", "Excel", "Parquet", "JSON"]
+        format_choice, ok = QInputDialog.getItem(
+            self,
+            "Export Format",
+            "Select export format:",
+            formats,
+            0,
+            False
+        )
+
+        if not ok:
+            return
+
+        # Get file path
+        file_dialog_filters = {
+            "CSV": "CSV files (*.csv)",
+            "Excel": "Excel files (*.xlsx)",
+            "Parquet": "Parquet files (*.parquet)",
+            "JSON": "JSON files (*.json)"
+        }
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Dataset",
+            f"{self.current_dataset}_{self.current_version}",
+            file_dialog_filters[format_choice]
+        )
+
+        if not file_path:
+            return
+
+        try:
+            if format_choice == "CSV":
+                self.current_df.to_csv(file_path, index=False)
+            elif format_choice == "Excel":
+                self.current_df.to_excel(file_path, index=False)
+            elif format_choice == "Parquet":
+                self.current_df.to_parquet(file_path, index=False)
+            elif format_choice == "JSON":
+                self.current_df.to_json(file_path, orient="records", indent=2)
+            
+            QMessageBox.information(
+                self,
+                "Success",
+                f"Dataset exported to {file_path}"
+            )
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Export Error",
+                f"Failed to export: {str(e)}"
+            )
 
     def open_synthesis_dialog(self):
         """Open the operations builder dialog."""
