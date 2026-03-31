@@ -9,7 +9,8 @@ from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.svm import SVC, SVR
 from sklearn.decomposition import PCA
-from sklearn.cluster import KMeans, DBSCAN
+from sklearn.cluster import KMeans
+from sklearn.mixture import GaussianMixture as GMM
 
 from xgboost import XGBClassifier, XGBRegressor
 
@@ -186,14 +187,14 @@ def apply_clustering(
             **cluster_kwargs,
         )
 
-    elif method == "dbscan":
-        model = DBSCAN(**cluster_kwargs)
+    elif method == "gmm":
+        model = GMM(
+            random_state=random_seed,
+            **cluster_kwargs)
 
     else:
         raise ValueError("Unsupported clustering method.")
-
     labels = model.fit_predict(df)
-
     result_df = df.copy()
     result_df["cluster"] = labels
 
@@ -203,4 +204,4 @@ def apply_clustering(
         "params": cluster_kwargs,
     }
 
-    return result_df, model, config
+    return {"result": result_df, "labels": labels, "model": model, "config": config}

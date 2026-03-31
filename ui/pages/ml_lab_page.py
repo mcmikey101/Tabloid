@@ -13,7 +13,8 @@ from PySide6.QtWidgets import (
     QTextEdit,
     QGroupBox,
     QMessageBox,
-    QFileDialog
+    QFileDialog,
+    QInputDialog
 )
 from storage.file_store import FileStore
 from core.dataset_manager import DatasetManager
@@ -160,7 +161,7 @@ class MLLabPage(QWidget):
             ],
             "Clustering": [
                 "KMeans",
-                "DBSCAN"
+                "GMM"
             ]
         }
         
@@ -175,10 +176,12 @@ class MLLabPage(QWidget):
         self.n_estimators.hide()
         self.n_clusters_label.hide()
         self.n_clusters.hide()
-        self.eps_label.hide()
-        self.eps.hide()
-        self.min_samples_label.hide()
-        self.min_samples.hide()
+        self.n_components_label.hide()
+        self.n_components.hide()
+        self.covariance_type_label.hide()
+        self.covariance_type.hide()
+        self.n_init_label.hide()
+        self.n_init.hide()
 
         # Show relevant parameters based on model
         if "forest" in model_lower or "xgboost" in model_lower:
@@ -189,11 +192,13 @@ class MLLabPage(QWidget):
             self.n_clusters_label.show()
             self.n_clusters.show()
 
-        if model == "DBSCAN":
-            self.eps_label.show()
-            self.eps.show()
-            self.min_samples_label.show()
-            self.min_samples.show()
+        if model == "GMM":
+            self.n_components_label.show()
+            self.n_components.show()
+            self.covariance_type_label.show()
+            self.covariance_type.show()
+            self.n_init_label.show()
+            self.n_init.show()
 
     # ---------------------------------------------------------
     # Hyperparameters
@@ -214,34 +219,34 @@ class MLLabPage(QWidget):
         self.n_estimators = QSpinBox()
         self.n_estimators.setRange(10, 1000)
         self.n_estimators.setValue(100)
-
         self.n_estimators_label = QLabel("n_estimators")
+
+        self.n_components = QSpinBox()
+        self.n_components.setRange(1, 20)
+        self.n_components.setValue(3)
+        self.n_components_label = QLabel("Number of Components")
+
+        self.covariance_type = QComboBox()
+        self.covariance_type.addItems(["full", "tied", "diag", "spherical"])
+        self.covariance_type_label = QLabel("Covariance Type")
+
+        self.n_init = QSpinBox()
+        self.n_init.setRange(1, 50)
+        self.n_init.setValue(10)
+        self.n_init_label = QLabel("n_init")
 
         self.n_clusters = QSpinBox()
         self.n_clusters.setRange(2, 20)
         self.n_clusters.setValue(3)
-
         self.n_clusters_label = QLabel("Number of Clusters")
-
-        self.eps = QDoubleSpinBox()
-        self.eps.setRange(0.1, 10.0)
-        self.eps.setValue(0.5)
-        self.eps.setSingleStep(0.1)
-
-        self.eps_label = QLabel("EPS (DBSCAN)")
-
-        self.min_samples = QSpinBox()
-        self.min_samples.setRange(1, 100)
-        self.min_samples.setValue(5)
-
-        self.min_samples_label = QLabel("Min Samples (DBSCAN)")
 
         layout.addRow("Test Size", self.test_size)
         layout.addRow("Random Seed", self.random_seed)
         layout.addRow(self.n_estimators_label, self.n_estimators)
         layout.addRow(self.n_clusters_label, self.n_clusters)
-        layout.addRow(self.eps_label, self.eps)
-        layout.addRow(self.min_samples_label, self.min_samples)
+        layout.addRow(self.n_components_label, self.n_components)
+        layout.addRow(self.covariance_type_label, self.covariance_type)
+        layout.addRow(self.n_init_label, self.n_init)
 
         return box
 
@@ -285,24 +290,49 @@ class MLLabPage(QWidget):
             
             if task == "Clustering":
                 if model == "KMeans":
-                    self.current_model = modeling.apply_kmeans(
+                    clustering_results = modeling.apply_clustering(
                         self.current_df,
-                        n_clusters=self.n_clusters.value()
+                        method="kmeans",
+                        random_seed=self.random_seed.value(),
+                        n_clusters=self.n_clusters.value(),
                     )
-                    labels = self.current_model.labels_
+                    labels = clustering_results["labels"]
+                    self.current_model = clustering_results["model"]
+                    self.current_df = clustering_results["result"]
                     metrics = {"silhouette_score": evaluation.evaluate_clustering(
                         self.current_df, labels
                     )}
-                elif model == "DBSCAN":
-                    self.current_model = modeling.apply_dbscan(
+                elif model == "GMM":
+                    clustering_results = modeling.apply_clustering(
                         self.current_df,
-                        eps=self.eps.value(),
-                        min_samples=self.min_samples.value()
+                        method="gmm",
+                        random_seed=self.random_seed.value(),
+                        n_components=self.n_components.value(),
+                        covariance_type=self.covariance_type.currentText(),
+                        n_init=self.n_init.value()
                     )
-                    labels = self.current_model.labels_
+                    labels = clustering_results["labels"]
+                    self.current_model = clustering_results["model"]
+                    self.current_df = clustering_results["result"]
                     metrics = {"silhouette_score": evaluation.evaluate_clustering(
                         self.current_df, labels
                     )}
+                
+                self.display_metrics(metrics)
+                self.export_button.setEnabled(True)
+                QMessageBox.information(self, "Success", "Clustering completed!")
+                
+                # Prompt to save as version
+                save_version = QMessageBox.question(
+                    self,
+                    "Save as Version",
+                    "Do you want to save this clustered dataset as a new version?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+                
+                if save_version == QMessageBox.StandardButton.Yes:
+                    self._save_clustering_as_version(labels, model)
+            
             else:
                 model_type = model.lower()
                 task_type = task.lower()
@@ -334,14 +364,15 @@ class MLLabPage(QWidget):
                         self.current_splits["X_test"],
                         self.current_splits["y_test"]
                     )
-            
-            self.display_metrics(metrics)
-            self.export_button.setEnabled(True)
-            QMessageBox.information(self, "Success", "Model training completed!")
+                
+                self.display_metrics(metrics)
+                self.export_button.setEnabled(True)
+                QMessageBox.information(self, "Success", "Model training completed!")
             
         except Exception as e:
             QMessageBox.critical(self, "Training Error", f"Failed to train model: {str(e)}")
         finally:
+            self.export_button.setEnabled(True)
             self.train_button.setEnabled(True)
             self.train_button.setText("Train Model")
 
@@ -369,6 +400,43 @@ class MLLabPage(QWidget):
                 lines.append(f"{key}: {value}")
 
         self.metrics_text.setText("\n".join(lines))
+
+    def _save_clustering_as_version(self, labels, model_name):
+        """Save clustered dataset as a new version.""" 
+        version_name, ok = QInputDialog.getText( self, "Save Version", "Enter new version name:" )
+        if not ok or not version_name:
+            return
+
+        try:
+            # Add cluster labels to dataframe
+            result_df = self.current_df.copy()
+            result_df["cluster"] = labels
+            
+            # Save as new version
+            self.version_manager.create_version(
+                dataset_name=self.dataset_combo.currentText(),
+                version_name=version_name,
+                df=result_df,
+                parent_version=self.version_combo.currentText(),
+                operation="clustering",
+                config={
+                    "model": model_name,
+                    "n_clusters": self.n_clusters.value() if model_name == "KMeans" else self.n_components.value(),
+                    "random_seed": self.random_seed.value()
+                }
+            )
+            
+            QMessageBox.information(
+                self,
+                "Success",
+                f"Clustered version '{version_name}' saved successfully!"
+            )
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"Failed to save version: {str(e)}"
+            )
 
     def _on_export_clicked(self): 
         """Export trained model to file.""" 
