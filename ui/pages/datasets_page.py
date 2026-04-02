@@ -146,12 +146,13 @@ class DatasetsPage(QWidget):
         self.version_tree.version_selected.connect(self.load_version)
 
         self.data_table.column_selected.connect(self.update_column_stats)
+        self.data_table.column_selected.connect(self.distribution_plot.plot_column)
 
         self.operations_btn.clicked.connect(self.open_operations_dialog)
-        self.delete_version_btn.clicked.connect(self.delete_current_version)
-        self.delete_dataset_btn.clicked.connect(self.delete_current_dataset)
         self.synthesize_btn.clicked.connect(self.open_synthesis_dialog)
         self.export_btn.clicked.connect(self.export_version)
+        self.delete_version_btn.clicked.connect(self.delete_current_version)
+        self.delete_dataset_btn.clicked.connect(self.delete_current_dataset)
 
     def export_version(self):
         # Ask for format
@@ -306,7 +307,11 @@ class DatasetsPage(QWidget):
         self.version_label.setText(f"Version: {version_name}")
 
         self.data_table.load_dataframe(df)
-        self.distribution_plot.load_dataframe(df)
+        self.distribution_plot.load_dataframe(
+            df, 
+            dataset_name=self.current_dataset,
+            version_name=version_name
+        )
 
     # -----------------------------------------------------
     # Column Statistics

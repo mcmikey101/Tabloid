@@ -155,7 +155,7 @@ class MLLabPage(QWidget):
             ],
             "Regression": [
                 "Linear_Regression",
-                "RandomF_orest",
+                "Random_Forest",
                 "SVR",
                 "XGBoost"
             ],

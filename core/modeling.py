@@ -71,7 +71,7 @@ def _create_model(
                 **model_kwargs,
             )
 
-        if model_type == "svm":
+        if model_type == "svr":
             return SVR(**model_kwargs)
 
         if model_type == "xgboost":

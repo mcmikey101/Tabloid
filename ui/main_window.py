@@ -15,6 +15,10 @@ from ui.pages.datasets_page import DatasetsPage
 from ui.pages.experiments_page import ExperimentsPage
 from ui.pages.ml_lab_page import MLLabPage
 
+from PySide6.QtGui import QIcon
+
+import os
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
