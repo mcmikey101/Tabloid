@@ -6,6 +6,14 @@ import numpy as np
 
 import pandas as pd
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+
+try:
+    import umap
+    HAS_UMAP = True
+except ImportError:
+    HAS_UMAP = False
 
 
 # ----------------------------------------------------------------------
@@ -152,13 +160,23 @@ def standard_scale(
     columns: List[str],
 ) -> Tuple[pd.DataFrame, Dict]:
     df_copy = df.copy()
+    
+    # Filter to only existing columns
+    existing_columns = [col for col in columns if col in df_copy.columns]
+    
+    if not existing_columns:
+        raise ValueError(f"None of the specified columns {columns} exist in the dataframe.")
+    
+    if len(existing_columns) < len(columns):
+        missing = [col for col in columns if col not in df_copy.columns]
+        print(f"Warning: Columns {missing} not found in dataframe. Scaling only existing columns.")
+    
     scaler = StandardScaler()
-
-    df_copy[columns] = scaler.fit_transform(df_copy[columns])
+    df_copy[existing_columns] = scaler.fit_transform(df_copy[existing_columns])
 
     config = {
         "operation": "standard_scale",
-        "columns": columns,
+        "columns": existing_columns,
     }
 
     return df_copy, config
@@ -173,13 +191,23 @@ def minmax_scale(
     columns: List[str],
 ) -> Tuple[pd.DataFrame, Dict]:
     df_copy = df.copy()
+    
+    # Filter to only existing columns
+    existing_columns = [col for col in columns if col in df_copy.columns]
+    
+    if not existing_columns:
+        raise ValueError(f"None of the specified columns {columns} exist in the dataframe.")
+    
+    if len(existing_columns) < len(columns):
+        missing = [col for col in columns if col not in df_copy.columns]
+        print(f"Warning: Columns {missing} not found in dataframe. Scaling only existing columns.")
+    
     scaler = MinMaxScaler()
-
-    df_copy[columns] = scaler.fit_transform(df_copy[columns])
+    df_copy[existing_columns] = scaler.fit_transform(df_copy[existing_columns])
 
     config = {
         "operation": "minmax_scale",
-        "columns": columns,
+        "columns": existing_columns,
     }
 
     return df_copy, config
@@ -240,4 +268,94 @@ def encode_classes(
         "mapping": mapping,
     }
 
+    return df_copy, config
+
+
+# ----------------------------------------------------------------------
+# Dimensionality Reduction
+# ----------------------------------------------------------------------
+
+def reduce_dimensionality(
+    df: pd.DataFrame,
+    columns: List[str],
+    method: str = "pca",
+    n_components: int = 2,
+) -> Tuple[pd.DataFrame, Dict]:
+    """
+    Reduce dimensionality of numerical features using PCA, t-SNE, or UMAP.
+    
+    Args:
+        df: Input dataframe
+        columns: List of numerical columns to reduce
+        method: Dimensionality reduction method ("pca", "tsne", or "umap")
+        n_components: Number of dimensions to reduce to
+    
+    Returns:
+        - Transformed DataFrame with original data + new reduced dimensions
+        - Config containing operation details
+    """
+    
+    df_copy = df.copy()
+    
+    # Filter to only existing columns
+    existing_columns = [col for col in columns if col in df_copy.columns]
+    
+    if not existing_columns:
+        raise ValueError(f"None of the specified columns {columns} exist in the dataframe.")
+    
+    # Select only numerical data
+    numerical_cols = df_copy[existing_columns].select_dtypes(include=[np.number]).columns.tolist()
+    
+    if not numerical_cols:
+        raise ValueError(f"None of the selected columns {existing_columns} contain numerical data.")
+    
+    if len(numerical_cols) < n_components:
+        raise ValueError(
+            f"Number of components ({n_components}) cannot exceed number of features ({len(numerical_cols)})."
+        )
+    
+    if n_components < 1:
+        raise ValueError("n_components must be at least 1.")
+    
+    # Prepare data for dimensionality reduction
+    X = df_copy[numerical_cols].values
+    
+    # Apply the selected method
+    if method.lower() == "pca":
+        reducer = PCA(n_components=n_components, random_state=42)
+        reduced = reducer.fit_transform(X)
+        explained_variance = reducer.explained_variance_ratio_.tolist()
+    elif method.lower() == "tsne":
+        reducer = TSNE(n_components=n_components, random_state=42, verbose=0)
+        reduced = reducer.fit_transform(X)
+        explained_variance = None
+    elif method.lower() == "umap":
+        if not HAS_UMAP:
+            raise RuntimeError("UMAP is not installed. Install it with: pip install umap-learn")
+        reducer = umap.UMAP(n_components=n_components, random_state=42)
+        reduced = reducer.fit_transform(X)
+        explained_variance = None
+    else:
+        raise ValueError(f"Unknown dimensionality reduction method: {method}")
+    
+    # Create new column names for reduced dimensions
+    prefix = method.lower()
+    new_columns = [f"{prefix}_{i+1}" for i in range(n_components)]
+    
+    # Add reduced dimensions as new columns
+    for i, col_name in enumerate(new_columns):
+        df_copy[col_name] = reduced[:, i]
+    
+    # Remove the original columns that were reduced
+    df_copy = df_copy.drop(columns=numerical_cols)
+    
+    config = {
+        "operation": "reduce_dimensionality",
+        "method": method.lower(),
+        "original_columns": numerical_cols,
+        "n_components": n_components,
+        "new_columns": new_columns,
+        "explained_variance": explained_variance,
+    }
+    
     return df_copy, config

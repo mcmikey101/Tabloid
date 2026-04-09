@@ -17,8 +17,9 @@ class ColumnStatsWidget(QWidget):
         scroll.setWidgetResizable(True)
         scroll.setStyleSheet("""
             QScrollArea {
-                border: 1px solid #cccccc;
+                border: 1px solid #3a3d4a;
                 border-radius: 4px;
+                background-color: #262738;
             }
         """)
         
@@ -27,9 +28,10 @@ class ColumnStatsWidget(QWidget):
         self.text.setStyleSheet("""
             QTextEdit {
                 border: none;
-                font-family: 'Courier New';
-                font-size: 14px;
-                background-color: #f9f9f9;
+                font-family: 'JetBrains Mono', 'Courier New', monospace;
+                font-size: 12px;
+                background-color: #262738;
+                color: #e0e0e0;
                 padding: 8px;
             }
         """)

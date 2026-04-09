@@ -71,6 +71,11 @@ class OperationsDialog(QDialog):
             "requires_columns": True,
             "params": [],
         },
+        "reduce_dimensionality": {
+            "name": "Dimensionality Reduction",
+            "requires_columns": True,
+            "params": ["method", "n_components"],
+        },
     }
 
     def __init__(self, parent=None):
@@ -224,8 +229,34 @@ class OperationsDialog(QDialog):
             drop_first = self._get_bool_input("Drop first category?")
             config["drop_first"] = drop_first
 
-        if "method" in operation_info["params"]:
-            methods = ["iqr", "z_score"]
+        # Handle dimensionality reduction parameters
+        if operation_id == "reduce_dimensionality":
+            # Method selection for dimensionality reduction
+            dr_methods = ["pca", "tsne", "umap"]
+            method, ok = self._select_from_list(
+                dr_methods, "Select Dimensionality Reduction Method:"
+            )
+            if not ok:
+                return None
+            config["method"] = method
+            
+            # n_components selection
+            max_components = len(config.get("columns", [1]))
+            n_components, ok = QInputDialog.getInt(
+                self,
+                "Number of Components",
+                f"Number of dimensions to reduce to (1-{max_components}):",
+                2,
+                1,
+                max_components,
+                1,
+            )
+            if not ok:
+                return None
+            config["n_components"] = n_components
+
+        if operation_id == "drop_outliers" and "method" in operation_info["params"]:
+            methods = ["iqr", "zscore"]
             method, ok = self._select_from_list(
                 methods, "Select Outlier Detection Method:"
             )
@@ -464,6 +495,13 @@ class OperationsDialog(QDialog):
             )
         elif operation_id == "encode_classes":
             return preprocessing.encode_classes(df, column=config["column"])
+        elif operation_id == "reduce_dimensionality":
+            return preprocessing.reduce_dimensionality(
+                df,
+                columns=config["columns"],
+                method=config.get("method", "pca"),
+                n_components=config.get("n_components", 2),
+            )
         else:
             raise ValueError(f"Unknown operation: {operation_id}")
 
