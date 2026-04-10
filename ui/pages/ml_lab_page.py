@@ -27,6 +27,9 @@ from core.version_manager import VersionManager
 
 from core import modeling
 from core import evaluation
+from core.worker_thread import WorkerThread
+from ui.dialogs.progress_dialog import ProgressDialog
+from experiments.registry import ExperimentManager
 
 import pickle 
 from pathlib import Path
@@ -53,6 +56,7 @@ class MLLabPage(QWidget):
             version_manager=self.version_manager,
             file_store=self.file_store
         )
+        self.experiment_manager = ExperimentManager()
         
         self.current_df = None
         self.current_model = None
@@ -579,8 +583,8 @@ class MLLabPage(QWidget):
         self.train_button = QPushButton("Train Model")
         self.train_button.clicked.connect(self._on_train_clicked)
 
-        self.export_button = QPushButton("Export Model")
-        self.export_button.clicked.connect(self._on_export_clicked)
+        self.export_button = QPushButton("Show on Experiments Page")
+        self.export_button.clicked.connect(self._on_show_experiments_clicked)
         self.export_button.setEnabled(False)
 
         layout.addStretch()
@@ -588,6 +592,182 @@ class MLLabPage(QWidget):
         layout.addWidget(self.export_button)
 
         return container
+    
+    def _get_current_hyperparameters(self) -> dict:
+        """Get current hyperparameter values from UI."""
+        model_name = self.model_combo.currentText()
+        hyperparams = {}
+        
+        if model_name == "Logistic_Regression":
+            hyperparams["C"] = self.lr_c.value()
+            hyperparams["max_iter"] = self.lr_max_iter.value()
+            hyperparams["solver"] = self.lr_solver.currentText()
+            hyperparams["penalty"] = self.lr_penalty.currentText()
+        
+        elif model_name == "Random_Forest":
+            hyperparams["n_estimators"] = self.rf_n_estimators.value()
+            hyperparams["max_depth"] = self.rf_max_depth.value()
+            hyperparams["min_samples_split"] = self.rf_min_samples_split.value()
+            hyperparams["min_samples_leaf"] = self.rf_min_samples_leaf.value()
+        
+        elif model_name == "SVM" or model_name == "SVR":
+            hyperparams["C"] = self.svm_c.value()
+            hyperparams["kernel"] = self.svm_kernel.currentText()
+            hyperparams["gamma"] = self.svm_gamma.currentText()
+        
+        elif model_name == "XGBoost":
+            hyperparams["n_estimators"] = self.xgb_n_estimators.value()
+            hyperparams["max_depth"] = self.xgb_max_depth.value()
+            hyperparams["learning_rate"] = self.xgb_learning_rate.value()
+            hyperparams["subsample"] = self.xgb_subsample.value()
+            hyperparams["colsample_bytree"] = self.xgb_colsample_bytree.value()
+        
+        elif model_name == "KMeans":
+            hyperparams["n_clusters"] = self.kmeans_n_clusters.value()
+            hyperparams["init"] = self.kmeans_init.currentText()
+            hyperparams["max_iter"] = self.kmeans_max_iter.value()
+        
+        elif model_name == "GMM":
+            hyperparams["n_components"] = self.gmm_n_components.value()
+            hyperparams["covariance_type"] = self.gmm_covariance_type.currentText()
+            hyperparams["n_init"] = self.gmm_n_init.value()
+        
+        hyperparams["test_size"] = self.test_size.value()
+        
+        return hyperparams
+    
+    def _run_training(self, training_params: dict) -> dict:
+        """
+        Run the actual training logic. This method runs in a worker thread.
+        
+        Args:
+            training_params: Dictionary containing all parameters needed for training
+            
+        Returns:
+            Dictionary with training results
+        """
+        df = training_params["df"]
+        task = training_params["task"]
+        model = training_params["model"]
+        target_col = training_params["target_col"]
+        
+        # Prepare dataframe with selected features
+        if self.selected_features is not None and task != "Clustering":
+            # For supervised learning, use selected features + target
+            cols_to_use = list(self.selected_features) + [target_col]
+            df = df[cols_to_use]
+        elif self.selected_features is not None and task == "Clustering":
+            # For clustering, use only selected features
+            df = df[self.selected_features]
+        
+        results = {}
+        
+        if task == "Clustering":
+            if model == "KMeans":
+                clustering_results = modeling.apply_clustering(
+                    df,
+                    method="kmeans",
+                    random_seed=self.random_seed.value(),
+                    n_clusters=self.kmeans_n_clusters.value(),
+                    init=self.kmeans_init.currentText(),
+                    max_iter=self.kmeans_max_iter.value(),
+                )
+                labels = clustering_results["labels"]
+                results["model"] = clustering_results["model"]
+                results["df"] = clustering_results["result"]
+                results["labels"] = labels
+                results["task"] = task
+                results["model_name"] = model
+                metrics = {"silhouette_score": evaluation.evaluate_clustering(
+                    clustering_results["result"], labels
+                )}
+                results["metrics"] = metrics
+            elif model == "GMM":
+                clustering_results = modeling.apply_clustering(
+                    df,
+                    method="gmm",
+                    random_seed=self.random_seed.value(),
+                    n_components=self.gmm_n_components.value(),
+                    covariance_type=self.gmm_covariance_type.currentText(),
+                    n_init=self.gmm_n_init.value()
+                )
+                labels = clustering_results["labels"]
+                results["model"] = clustering_results["model"]
+                results["df"] = clustering_results["result"]
+                results["labels"] = labels
+                results["task"] = task
+                results["model_name"] = model
+                metrics = {"silhouette_score": evaluation.evaluate_clustering(
+                    clustering_results["result"], labels
+                )}
+                results["metrics"] = metrics
+        else:
+            model_type = model.lower()
+            task_type = task.lower()
+            
+            # Build model kwargs based on model type with all the new hyperparameters
+            model_kwargs = {}
+            
+            if model == "Logistic_Regression":
+                model_kwargs["C"] = self.lr_c.value()
+                model_kwargs["max_iter"] = self.lr_max_iter.value()
+                model_kwargs["solver"] = self.lr_solver.currentText()
+                model_kwargs["penalty"] = self.lr_penalty.currentText()
+            
+            elif model == "Random_Forest":
+                model_kwargs["n_estimators"] = self.rf_n_estimators.value()
+                model_kwargs["max_depth"] = self.rf_max_depth.value()
+                model_kwargs["min_samples_split"] = self.rf_min_samples_split.value()
+                model_kwargs["min_samples_leaf"] = self.rf_min_samples_leaf.value()
+            
+            elif model == "SVM":
+                model_kwargs["C"] = self.svm_c.value()
+                model_kwargs["kernel"] = self.svm_kernel.currentText()
+                model_kwargs["gamma"] = self.svm_gamma.currentText()
+            
+            elif model == "SVR":
+                model_kwargs["C"] = self.svm_c.value()
+                model_kwargs["kernel"] = self.svm_kernel.currentText()
+                model_kwargs["gamma"] = self.svm_gamma.currentText()
+            
+            elif model == "XGBoost":
+                model_kwargs["n_estimators"] = self.xgb_n_estimators.value()
+                model_kwargs["max_depth"] = self.xgb_max_depth.value()
+                model_kwargs["learning_rate"] = self.xgb_learning_rate.value()
+                model_kwargs["subsample"] = self.xgb_subsample.value()
+                model_kwargs["colsample_bytree"] = self.xgb_colsample_bytree.value()
+            
+            current_model, current_splits, config = modeling.train_model(
+                df=df,
+                target_column=target_col,
+                task_type=task_type,
+                model_type=model_type,
+                test_size=self.test_size.value(),
+                random_seed=self.random_seed.value(),
+                **model_kwargs
+            )
+            
+            if task_type == "classification":
+                metrics = evaluation.evaluate_classification(
+                    current_model,
+                    current_splits["X_test"],
+                    current_splits["y_test"]
+                )
+            else:
+                metrics = evaluation.evaluate_regression(
+                    current_model,
+                    current_splits["X_test"],
+                    current_splits["y_test"]
+                )
+            
+            results["model"] = current_model
+            results["splits"] = current_splits
+            results["config"] = config
+            results["metrics"] = metrics
+            results["task"] = task
+            results["model_name"] = model
+        
+        return results
 
     def _on_train_clicked(self):
         """Train model with selected parameters."""
@@ -603,136 +783,133 @@ class MLLabPage(QWidget):
             QMessageBox.warning(self, "Warning", "Please select a target column.")
             return
 
+        # Prepare training parameters
+        training_params = {
+            "df": self.current_df.copy(),
+            "task": task,
+            "model": model,
+            "target_col": target_col,
+        }
+        
+        # Create worker thread for training
+        self.training_worker = WorkerThread(
+            func=self._run_training,
+            args=(training_params,)
+        )
+        
+        # Create progress dialog
+        self.training_progress = ProgressDialog(f"Training {model}...", self, allow_cancel=True)
+        
+        # Connect signals
+        self.training_worker.progress.connect(self.training_progress.set_progress)
+        self.training_worker.status.connect(self.training_progress.set_status)
+        self.training_worker.completed.connect(self._on_training_complete)
+        self.training_worker.error.connect(self._on_training_error)
+        self.training_worker.cancelled.connect(self._on_training_cancelled)
+        
+        # Set cancel callback
+        self.training_progress.set_cancel_callback(self.training_worker.request_cancel)
+        
+        # Disable training button
+        self.train_button.setEnabled(False)
+        
+        # Start worker
+        self.training_worker.start()
+        
+        # Show progress dialog
+        self.training_progress.exec()
+    
+    def _on_training_complete(self, result):
+        """Handle training completion."""
+        self.train_button.setEnabled(True)
+        
+        # Update model state
+        self.current_model = result["model"]
+        if "df" in result:
+            self.current_df = result["df"]
+        if "splits" in result:
+            self.current_splits = result["splits"]
+        
+        # Display metrics
+        self.display_metrics(result["metrics"])
+        self.export_button.setEnabled(True)
+        
+        # Close progress dialog
+        self.training_progress.accept()
+        
+        # Save experiment
         try:
-            self.train_button.setEnabled(False)
-            self.train_button.setText("Training...")
+            dataset_name = self.dataset_combo.currentText()
+            version_name = self.version_combo.currentText()
+            model_name = result["model_name"]
+            task = result["task"]
             
-            # Prepare dataframe with selected features
-            df = self.current_df.copy()
-            if self.selected_features is not None and task != "Clustering":
-                # For supervised learning, use selected features + target
-                cols_to_use = list(self.selected_features) + [target_col]
-                df = df[cols_to_use]
-            elif self.selected_features is not None and task == "Clustering":
-                # For clustering, use only selected features
-                df = df[self.selected_features]
+            # Build hyperparameters dict from UI
+            hyperparams = self._get_current_hyperparameters()
             
-            if task == "Clustering":
-                if model == "KMeans":
-                    clustering_results = modeling.apply_clustering(
-                        df,
-                        method="kmeans",
-                        random_seed=self.random_seed.value(),
-                        n_clusters=self.kmeans_n_clusters.value(),
-                        init=self.kmeans_init.currentText(),
-                        max_iter=self.kmeans_max_iter.value(),
-                    )
-                    labels = clustering_results["labels"]
-                    self.current_model = clustering_results["model"]
-                    self.current_df = clustering_results["result"]
-                    metrics = {"silhouette_score": evaluation.evaluate_clustering(
-                        self.current_df, labels
-                    )}
-                elif model == "GMM":
-                    clustering_results = modeling.apply_clustering(
-                        df,
-                        method="gmm",
-                        random_seed=self.random_seed.value(),
-                        n_components=self.gmm_n_components.value(),
-                        covariance_type=self.gmm_covariance_type.currentText(),
-                        n_init=self.gmm_n_init.value()
-                    )
-                    labels = clustering_results["labels"]
-                    self.current_model = clustering_results["model"]
-                    self.current_df = clustering_results["result"]
-                    metrics = {"silhouette_score": evaluation.evaluate_clustering(
-                        self.current_df, labels
-                    )}
-                
-                self.display_metrics(metrics)
-                self.export_button.setEnabled(True)
-                QMessageBox.information(self, "Success", "Clustering completed!")
-                
-                # Prompt to save as version
-                save_version = QMessageBox.question(
-                    self,
-                    "Save as Version",
-                    "Do you want to save this clustered dataset as a new version?",
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-                )
-                
-                if save_version == QMessageBox.StandardButton.Yes:
-                    self._save_clustering_as_version(labels, model)
+            # Save experiment with model
+            experiment_id = self.experiment_manager.create_experiment(
+                dataset_name=dataset_name,
+                dataset_version=version_name,
+                model_type=model_name,
+                hyperparameters=hyperparams,
+                metrics=result["metrics"],
+                random_seed=self.random_seed.value(),
+                model_object=self.current_model,
+                notes=f"Training task: {task}"
+            )
             
-            else:
-                model_type = model.lower()
-                task_type = task.lower()
-                
-                # Build model kwargs based on model type with all the new hyperparameters
-                model_kwargs = {}
-                
-                if model == "Logistic_Regression":
-                    model_kwargs["C"] = self.lr_c.value()
-                    model_kwargs["max_iter"] = self.lr_max_iter.value()
-                    model_kwargs["solver"] = self.lr_solver.currentText()
-                    model_kwargs["penalty"] = self.lr_penalty.currentText()
-                
-                elif model == "Random_Forest":
-                    model_kwargs["n_estimators"] = self.rf_n_estimators.value()
-                    model_kwargs["max_depth"] = self.rf_max_depth.value()
-                    model_kwargs["min_samples_split"] = self.rf_min_samples_split.value()
-                    model_kwargs["min_samples_leaf"] = self.rf_min_samples_leaf.value()
-                
-                elif model == "SVM":
-                    model_kwargs["C"] = self.svm_c.value()
-                    model_kwargs["kernel"] = self.svm_kernel.currentText()
-                    model_kwargs["gamma"] = self.svm_gamma.currentText()
-                
-                elif model == "SVR":
-                    model_kwargs["C"] = self.svm_c.value()
-                    model_kwargs["kernel"] = self.svm_kernel.currentText()
-                    model_kwargs["gamma"] = self.svm_gamma.currentText()
-                
-                elif model == "XGBoost":
-                    model_kwargs["n_estimators"] = self.xgb_n_estimators.value()
-                    model_kwargs["max_depth"] = self.xgb_max_depth.value()
-                    model_kwargs["learning_rate"] = self.xgb_learning_rate.value()
-                    model_kwargs["subsample"] = self.xgb_subsample.value()
-                    model_kwargs["colsample_bytree"] = self.xgb_colsample_bytree.value()
-                
-                self.current_model, self.current_splits, config = modeling.train_model(
-                    df=df,
-                    target_column=target_col,
-                    task_type=task_type,
-                    model_type=model_type,
-                    test_size=self.test_size.value(),
-                    random_seed=self.random_seed.value(),
-                    **model_kwargs
-                )
-                
-                if task_type == "classification":
-                    metrics = evaluation.evaluate_classification(
-                        self.current_model,
-                        self.current_splits["X_test"],
-                        self.current_splits["y_test"]
-                    )
-                else:
-                    metrics = evaluation.evaluate_regression(
-                        self.current_model,
-                        self.current_splits["X_test"],
-                        self.current_splits["y_test"]
-                    )
-                
-                self.display_metrics(metrics)
-                self.export_button.setEnabled(True)
-                QMessageBox.information(self, "Success", "Model training completed!")
-            
+            # Show experiment saved notification
+            QMessageBox.information(
+                self,
+                "Experiment Saved",
+                f"Experiment successfully saved!\n"
+                f"Experiment ID: {experiment_id}"
+            )
         except Exception as e:
-            QMessageBox.critical(self, "Training Error", f"Failed to train model: {str(e)}")
-        finally:
-            self.export_button.setEnabled(True)
-            self.train_button.setEnabled(True)
-            self.train_button.setText("Train Model")
+            QMessageBox.warning(
+                self,
+                "Warning",
+                f"Model trained but failed to save experiment:\n{str(e)}\n\n"
+                f"You can still use the model in this session."
+            )
+        
+        # Determine success message
+        if result["task"] == "Clustering":
+            QMessageBox.information(self, "Success", "Clustering completed!")
+            
+            # Prompt to save as version for clustering
+            save_version = QMessageBox.question(
+                self,
+                "Save as Version",
+                "Do you want to save this clustered dataset as a new version?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            
+            if save_version == QMessageBox.StandardButton.Yes:
+                self._save_clustering_as_version(result["labels"], result["model_name"])
+        else:
+            QMessageBox.information(self, "Success", "Model training completed!")
+        
+        # Clean up worker
+        self.training_worker.quit()
+        self.training_worker.wait()
+    
+    def _on_training_cancelled(self):
+        """Handle training cancellation."""
+        self.train_button.setEnabled(True)
+        self.training_worker.quit()
+        self.training_worker.wait()
+        self.training_progress.accept()
+        QMessageBox.information(self, "Cancelled", "Training operation was cancelled.")
+    
+    def _on_training_error(self, error_msg: str):
+        """Handle training error."""
+        self.train_button.setEnabled(True)
+        self.training_worker.quit()
+        self.training_worker.wait()
+        self.training_progress.accept()
+        QMessageBox.critical(self, "Training Error", f"Failed to train model:\n\n{error_msg}")
 
     # ---------------------------------------------------------
     # Metrics
@@ -803,6 +980,9 @@ class MLLabPage(QWidget):
                 # Explicitly call version changed handler to ensure UI updates immediately
                 self._on_version_changed(version_name)
             
+            # Update version tree on datasets page
+            self._update_datasets_page_version_tree(dataset_name)
+            
             QMessageBox.information(
                 self,
                 "Success",
@@ -815,41 +995,33 @@ class MLLabPage(QWidget):
                 f"Failed to save version: {str(e)}"
             )
 
-    def _on_export_clicked(self): 
-        """Export trained model to file.""" 
-        if self.current_model is None: 
-            QMessageBox.warning(self, "Warning", "No trained model to export.") 
-            return
-                
-        file_path, _ = QFileDialog.getSaveFileName(
-            self,
-            "Export Model",
-            f"{self.dataset_combo.currentText()}_{self.task_combo.currentText()}_model",
-            "Pickle files (*.pkl);;Joblib files (*.joblib)"
-        )
-
-        if not file_path:
-            return
-
-        try:
-            if file_path.endswith('.pkl'):
-                with open(file_path, 'wb') as f:
-                    pickle.dump(self.current_model, f)
-            else:  # joblib
-                import joblib
-                joblib.dump(self.current_model, file_path)
-            
+    def _on_show_experiments_clicked(self):
+        """Navigate to the experiments page."""
+        # Get the main window
+        main_window = self.window()
+        
+        # Navigate to experiments page (index 1 in QStackedWidget)
+        if hasattr(main_window, 'pages'):
+            main_window.pages.setCurrentIndex(1)
             QMessageBox.information(
                 self,
-                "Success",
-                f"Model exported to {file_path}"
+                "Experiments Page",
+                "Check the Experiments page to browse or export your trained model."
             )
+    
+    def _update_datasets_page_version_tree(self, dataset_name: str):
+        """Update version tree on datasets page after new version is created."""
+        try:
+            main_window = self.window()
+            if hasattr(main_window, 'pages'):
+                # Get the datasets page (index 0 in QStackedWidget)
+                datasets_page = main_window.pages.widget(0)
+                if datasets_page and hasattr(datasets_page, 'load_dataset'):
+                    # Reload the dataset to show new version in tree
+                    datasets_page.load_dataset(dataset_name)
         except Exception as e:
-            QMessageBox.critical(
-                self,
-                "Export Error",
-                f"Failed to export model: {str(e)}"
-            )
+            # Silently fail if we can't update the datasets page
+            pass
 
     # ---------------------------------------------------------
     # Signals

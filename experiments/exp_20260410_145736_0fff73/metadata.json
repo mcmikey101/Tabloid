@@ -1,0 +1,27 @@
+{
+    "experiment_id": "exp_20260410_145736_0fff73",
+    "timestamp": "2026-04-10T14:57:36.787167",
+    "dataset": {
+        "name": "diabetes",
+        "version": "regression_prep"
+    },
+    "model": {
+        "type": "Random_Forest",
+        "hyperparameters": {
+            "n_estimators": 100,
+            "max_depth": 10,
+            "min_samples_split": 2,
+            "min_samples_leaf": 1,
+            "test_size": 0.2
+        }
+    },
+    "preprocessing": {},
+    "metrics": {
+        "mse": 0.03025815402774927,
+        "rmse": 0.17394871091143294,
+        "mae": 0.13824916723605193,
+        "r2": 0.6497274599649919
+    },
+    "random_seed": 42,
+    "notes": "Training task: Regression"
+}

@@ -3,6 +3,8 @@ from PySide6.QtCore import Qt
 import pandas as pd
 
 from core import synthesis
+from core.worker_thread import WorkerThread
+from ui.dialogs.progress_dialog import ProgressDialog
 
 class SynthesisDialog(QDialog):
     """Dialog for configuring data synthesis parameters."""
@@ -60,39 +62,80 @@ class SynthesisDialog(QDialog):
             QMessageBox.warning(self, "Error", "No dataframe loaded.")
             return
         
-        try:
-            self.synthesize_btn.setEnabled(False)
-            self.synthesize_btn.setText("Synthesizing...")
-            
-            mode = self.mode_combo.currentText()
-            num_rows = self.rows_spinbox.value()
-            
-            # Map UI text to model type
-            model_map = {
-                "Gaussian Copula": "gaussian_copula",
-                "CTGAN": "ctgan",
-                "TVAE": "tvae"
+        mode = self.mode_combo.currentText()
+        num_rows = self.rows_spinbox.value()
+        
+        # Map UI text to model type
+        model_map = {
+            "Gaussian Copula": "gaussian_copula",
+            "CTGAN": "ctgan",
+            "TVAE": "tvae"
+        }
+        model_type = model_map[mode]
+        
+        # Create worker thread
+        self.worker = WorkerThread(
+            func=synthesis.synthesize,
+            kwargs={
+                "df": self.current_df,
+                "num_rows": num_rows,
+                "model_type": model_type,
+                "evaluate": True
             }
-            model_type = model_map[mode]
-            
-            # Run synthesis
-            self.result_df, self.result_config = synthesis.synthesize(
-                df=self.current_df,
-                num_rows=num_rows,
-                model_type=model_type,
-                evaluate=True
-            )
-            
-            self.accept()
-        except Exception as e:
-            QMessageBox.critical(
-                self,
-                "Synthesis Error",
-                f"Failed to synthesize data: {str(e)}"
-            )
-        finally:
-            self.synthesize_btn.setEnabled(True)
-            self.synthesize_btn.setText("Synthesize")
+        )
+        
+        # Create progress dialog
+        self.progress_dialog = ProgressDialog(f"Synthesizing data with {mode}...", self, allow_cancel=True)
+        
+        # Connect worker signals
+        self.worker.progress.connect(self.progress_dialog.set_progress)
+        self.worker.status.connect(self.progress_dialog.set_status)
+        self.worker.completed.connect(self._on_synthesis_complete)
+        self.worker.error.connect(self._on_synthesis_error)
+        self.worker.cancelled.connect(self._on_synthesis_cancelled)
+        
+        # Set cancel callback
+        self.progress_dialog.set_cancel_callback(self.worker.request_cancel)
+        
+        # Disable synthesis button
+        self.synthesize_btn.setEnabled(False)
+        
+        # Start worker
+        self.worker.start()
+        
+        # Show progress dialog (blocks user interaction but not the event loop)
+        self.progress_dialog.exec()
+    
+    def _on_synthesis_complete(self, result):
+        """Handle synthesis completion."""
+        self.result_df, self.result_config = result
+        self.synthesize_btn.setEnabled(True)
+        self.worker.quit()
+        self.worker.wait()
+        self.progress_dialog.accept()
+        self.accept()
+    
+    def _on_synthesis_cancelled(self):
+        """Handle synthesis cancellation."""
+        self.synthesize_btn.setEnabled(True)
+        self.worker.quit()
+        self.worker.wait()
+        self.progress_dialog.accept()
+        QMessageBox.information(self, "Cancelled", "Synthesis operation was cancelled.")
+        self.reject()
+    
+    def _on_synthesis_error(self, error_msg: str):
+        """Handle synthesis error."""
+        self.synthesize_btn.setEnabled(True)
+        self.worker.quit()
+        self.worker.wait()
+        self.progress_dialog.accept()
+        
+        QMessageBox.critical(
+            self,
+            "Synthesis Error",
+            f"Failed to synthesize data:\n\n{error_msg}"
+        )
 
     def get_results(self) -> tuple:
         """Return synthesized dataframe and config."""

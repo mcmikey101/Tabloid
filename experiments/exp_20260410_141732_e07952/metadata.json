@@ -1,0 +1,23 @@
+{
+    "experiment_id": "exp_20260410_141732_e07952",
+    "timestamp": "2026-04-10T14:17:32.861779",
+    "dataset": {
+        "name": "diabetes",
+        "version": "regression_prep"
+    },
+    "model": {
+        "type": "Linear_Regression",
+        "hyperparameters": {
+            "test_size": 0.2
+        }
+    },
+    "preprocessing": {},
+    "metrics": {
+        "mse": 0.34424710756984606,
+        "rmse": 0.5867257515823266,
+        "mae": 0.45753695054988774,
+        "r2": 0.35893066934374507
+    },
+    "random_seed": 42,
+    "notes": "Training task: Regression"
+}

@@ -189,3 +189,21 @@ class ExperimentManager:
     def _save_model(self, path: Path, model: Any) -> None:
         with open(path, "wb") as f:
             pickle.dump(model, f)
+
+    def delete_experiment(self, experiment_id: str) -> bool:
+        """
+        Delete an experiment and all its associated files.
+        Returns True if successful, False otherwise.
+        """
+        import shutil
+        
+        exp_dir = self.base_path / experiment_id
+        
+        if not exp_dir.exists():
+            return False
+        
+        try:
+            shutil.rmtree(exp_dir)
+            return True
+        except Exception:
+            return False

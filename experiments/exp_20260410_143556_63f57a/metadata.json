@@ -1,0 +1,25 @@
+{
+    "experiment_id": "exp_20260410_143556_63f57a",
+    "timestamp": "2026-04-10T14:35:56.837866",
+    "dataset": {
+        "name": "diabetes",
+        "version": "umap_2d"
+    },
+    "model": {
+        "type": "GMM",
+        "hyperparameters": {
+            "n_components": 2,
+            "covariance_type": "full",
+            "n_init": 10,
+            "test_size": 0.2
+        }
+    },
+    "preprocessing": {},
+    "metrics": {
+        "silhouette_score": {
+            "silhouette_score": 0.48919710016491064
+        }
+    },
+    "random_seed": 42,
+    "notes": "Training task: Clustering"
+}
