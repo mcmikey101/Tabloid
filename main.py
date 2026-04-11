@@ -4,6 +4,7 @@ from PySide6.QtGui import QIcon, QFont, QFontDatabase
 from ui.main_window import MainWindow
 
 import os
+import multiprocessing
 
 
 def load_stylesheet(app):
@@ -27,6 +28,13 @@ def setup_fonts():
 
 
 def main():
+    # Set multiprocessing start method for consistent cross-platform behavior
+    try:
+        multiprocessing.set_start_method('spawn', force=True)
+    except RuntimeError:
+        # Ignore if already set
+        pass
+    
     app = QApplication(sys.argv)
 
     icon_path = os.path.join(os.path.dirname(__file__), 'assets/tabloid_icon.png')

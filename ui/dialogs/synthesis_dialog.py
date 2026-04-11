@@ -17,6 +17,7 @@ class SynthesisDialog(QDialog):
         self.current_df = None
         self.result_df = None
         self.result_config = None
+        self._is_active = True  # Track if dialog is still valid
         self._init_ui()
 
     def _init_ui(self):
@@ -108,34 +109,83 @@ class SynthesisDialog(QDialog):
     
     def _on_synthesis_complete(self, result):
         """Handle synthesis completion."""
+        if not self._is_active:
+            return
+        
         self.result_df, self.result_config = result
         self.synthesize_btn.setEnabled(True)
-        self.worker.quit()
-        self.worker.wait()
         self.progress_dialog.accept()
+        
+        # Clean up worker
+        try:
+            if hasattr(self, 'worker') and self.worker:
+                self.worker.quit()
+                self.worker.wait(timeout=1000)
+        except Exception as e:
+            print(f"Error cleaning up worker: {e}")
+        
         self.accept()
     
     def _on_synthesis_cancelled(self):
         """Handle synthesis cancellation."""
+        if not self._is_active:
+            return
+        
         self.synthesize_btn.setEnabled(True)
-        self.worker.quit()
-        self.worker.wait()
-        self.progress_dialog.accept()
+        
+        # Close progress dialog if still open
+        if self.progress_dialog and self.progress_dialog.isVisible():
+            self.progress_dialog.mark_cancelled()
+            self.progress_dialog.accept()
+        
+        # Clean up worker resources
+        try:
+            if hasattr(self, 'worker') and self.worker:
+                self.worker.quit()
+                self.worker.wait(timeout=1000)
+        except Exception as e:
+            print(f"Error cleaning up worker: {e}")
+        
+        # Show cancellation message
         QMessageBox.information(self, "Cancelled", "Synthesis operation was cancelled.")
         self.reject()
     
     def _on_synthesis_error(self, error_msg: str):
         """Handle synthesis error."""
+        if not self._is_active:
+            return
+        
         self.synthesize_btn.setEnabled(True)
-        self.worker.quit()
-        self.worker.wait()
         self.progress_dialog.accept()
+        
+        # Clean up worker
+        try:
+            if hasattr(self, 'worker') and self.worker:
+                self.worker.quit()
+                self.worker.wait(timeout=1000)
+        except Exception as e:
+            print(f"Error cleaning up worker: {e}")
         
         QMessageBox.critical(
             self,
             "Synthesis Error",
             f"Failed to synthesize data:\n\n{error_msg}"
         )
+
+    def closeEvent(self, event):
+        """Handle dialog close event."""
+        self._is_active = False
+        
+        # Clean up worker if still running
+        try:
+            if hasattr(self, 'worker') and self.worker and self.worker.isRunning():
+                self.worker.request_cancel()
+                self.worker.quit()
+                self.worker.wait(timeout=1000)
+        except Exception as e:
+            print(f"Error cleaning up worker on close: {e}")
+        
+        super().closeEvent(event)
 
     def get_results(self) -> tuple:
         """Return synthesized dataframe and config."""

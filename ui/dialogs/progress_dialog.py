@@ -3,7 +3,7 @@ Progress dialog for displaying long-running operation status.
 """
 
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QProgressBar, QPushButton
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from typing import Optional, Callable
 
 
@@ -88,6 +88,16 @@ class ProgressDialog(QDialog):
         """Handle cancel button click."""
         self.cancel_btn.setEnabled(False)
         self.cancel_btn.setText("Cancelling...")
+        self.status_label.setText("Waiting for operation to stop...")
         if self._cancel_callback:
             self._cancel_callback()
+        # Close the dialog after requesting cancellation
+        # This prevents the UI from appearing frozen
+        QTimer.singleShot(100, self.accept)
+    
+    def mark_cancelled(self):
+        """Mark the dialog as cancelled and update UI."""
+        self.status_label.setText("Cancellation requested")
+        self.cancel_btn.setEnabled(False)
+        self.cancel_btn.setText("Cancelled")
 

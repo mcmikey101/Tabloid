@@ -86,10 +86,12 @@ class DatasetsPage(QWidget):
         self.operations_btn = QPushButton("Preprocessing")
         self.synthesize_btn = QPushButton("Synthesize")
         self.export_btn = QPushButton("Export")
+        self.train_model_btn = QPushButton("Train Model")
 
         layout.addWidget(self.operations_btn)
         layout.addWidget(self.synthesize_btn)
         layout.addWidget(self.export_btn)
+        layout.addWidget(self.train_model_btn)
 
         return layout
 
@@ -151,6 +153,7 @@ class DatasetsPage(QWidget):
         self.operations_btn.clicked.connect(self.open_operations_dialog)
         self.synthesize_btn.clicked.connect(self.open_synthesis_dialog)
         self.export_btn.clicked.connect(self.export_version)
+        self.train_model_btn.clicked.connect(self.open_train_model)
         self.delete_version_btn.clicked.connect(self.delete_current_version)
         self.delete_dataset_btn.clicked.connect(self.delete_current_dataset)
 
@@ -208,6 +211,45 @@ class DatasetsPage(QWidget):
                 "Export Error",
                 f"Failed to export: {str(e)}"
             )
+
+    def open_train_model(self):
+        """Open ML Lab page with current dataset and version pre-selected."""
+        if not self.current_dataset or not self.current_version:
+            QMessageBox.warning(
+                self,
+                "Warning",
+                "Please load a dataset and version first."
+            )
+            return
+        
+        # Get the main window to access the ML Lab page
+        main_window = self.window()
+        if not hasattr(main_window, 'pages'):
+            QMessageBox.critical(
+                self,
+                "Error",
+                "Could not access ML Lab page."
+            )
+            return
+        
+        # Get the ML Lab page (index 2)
+        ml_lab_page = main_window.pages.widget(2)
+        
+        # Set the dataset and version in the ML Lab page
+        try:
+            # Set dataset
+            ml_lab_page.dataset_combo.setCurrentText(self.current_dataset)
+            # Set version
+            ml_lab_page.version_combo.setCurrentText(self.current_version)
+        except Exception as e:
+            QMessageBox.warning(
+                self,
+                "Warning",
+                f"Could not pre-select dataset/version: {str(e)}"
+            )
+        
+        # Switch to ML Lab page
+        main_window.pages.setCurrentIndex(2)
 
     def open_synthesis_dialog(self):
         """Open the operations builder dialog."""
@@ -280,7 +322,7 @@ class DatasetsPage(QWidget):
 
         version_graph = self.version_manager.get_version_graph(dataset_name)
 
-        self.version_tree.load_versions(version_graph)
+        self.version_tree.load_versions(version_graph, self.version_manager, dataset_name)
 
         # Automatically select the raw version if it exists
         if "raw" in version_graph:

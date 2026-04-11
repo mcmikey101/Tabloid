@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QComboBox, QHBoxLayout, QTabWidget, QTextEdit, QPushButton, QDialog, QListWidget, QListWidgetItem, QCheckBox
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QComboBox, QHBoxLayout, QTabWidget, QTextEdit, QPushButton, QDialog, QListWidget, QListWidgetItem, QCheckBox, QFileDialog, QMessageBox
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 import json
@@ -71,6 +71,25 @@ class DistributionPlotWidget(QWidget):
         self.plot_type_combo.currentTextChanged.connect(self._on_plot_type_changed)
         plot_type_layout.addWidget(plot_label)
         plot_type_layout.addWidget(self.plot_type_combo)
+        
+        # Export button for distribution plot
+        self.export_plot_btn = QPushButton("Export Plot")
+        self.export_plot_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #5b7cfa;
+                color: white;
+                border: none;
+                padding: 4px 12px;
+                border-radius: 3px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #4c63d2;
+            }
+        """)
+        self.export_plot_btn.clicked.connect(lambda: self._export_figure(self.figure, "Distribution Plot"))
+        plot_type_layout.addWidget(self.export_plot_btn)
+        
         plot_type_layout.addStretch()
         plot_layout.addLayout(plot_type_layout)
         
@@ -129,12 +148,30 @@ class DistributionPlotWidget(QWidget):
         self.scatter_color_combo = QComboBox()
         self.scatter_color_combo.currentTextChanged.connect(self._on_scatter_plot_changed)
         
+        # Export button for scatter plot
+        self.export_scatter_btn = QPushButton("Export Plot")
+        self.export_scatter_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #5b7cfa;
+                color: white;
+                border: none;
+                padding: 4px 12px;
+                border-radius: 3px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #4c63d2;
+            }
+        """)
+        self.export_scatter_btn.clicked.connect(lambda: self._export_figure(self.scatter_figure, "Scatter Plot"))
+        
         controls_layout.addWidget(select_cols_label)
         controls_layout.addWidget(self.scatter_select_btn)
         controls_layout.addWidget(self.scatter_cols_label)
         controls_layout.addStretch()
         controls_layout.addWidget(color_label)
         controls_layout.addWidget(self.scatter_color_combo)
+        controls_layout.addWidget(self.export_scatter_btn)
         
         scatter_layout.addLayout(controls_layout)
         
@@ -532,3 +569,44 @@ class DistributionPlotWidget(QWidget):
                 ha="center", va="center", transform=ax.transAxes, color='#e0e0e0')
         
         self.scatter_canvas.draw()
+
+    def _export_figure(self, figure, plot_name: str):
+        """Export the current figure as an image file.
+        
+        Args:
+            figure: The matplotlib Figure object to export
+            plot_name: Name of the plot type for the file dialog title
+        """
+        if figure is None:
+            QMessageBox.warning(self, "Error", "No plot to export.")
+            return
+        
+        # Determine default filename
+        if self.current_version:
+            default_filename = f"{plot_name.replace(' ', '_')}_{self.current_version}.png"
+        else:
+            default_filename = f"{plot_name.replace(' ', '_')}.png"
+        
+        # File dialog
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            f"Export {plot_name}",
+            default_filename,
+            "PNG Images (*.png);;JPEG Images (*.jpg *.jpeg);;PDF Documents (*.pdf);;All Files (*)"
+        )
+        
+        if not file_path:
+            return  # User cancelled
+        
+        try:
+            # Save the figure
+            figure.savefig(
+                file_path,
+                facecolor=figure.get_facecolor(),
+                edgecolor=figure.get_edgecolor(),
+                bbox_inches='tight',
+                dpi=150
+            )
+            QMessageBox.information(self, "Success", f"Plot exported to:\n{file_path}")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to export plot:\n{str(e)}")

@@ -27,6 +27,10 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Tabloid")
         self.resize(1400, 900)
 
+        # Set window icon for taskbar
+        icon_path = os.path.join(os.path.dirname(__file__), '../assets/tabloid_icon.png')
+        self.setWindowIcon(QIcon(icon_path))
+
         self._build_ui()
 
     def _build_ui(self):
