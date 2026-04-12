@@ -35,7 +35,6 @@ def _create_model(
         if model_type == "logistic_regression":
             return LogisticRegression(
                 random_state=random_seed,
-                max_iter=1000,
                 **model_kwargs,
             )
 

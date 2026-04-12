@@ -25,8 +25,6 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 
 from core import preprocessing
-from core.worker_thread import WorkerThread
-from ui.dialogs.progress_dialog import ProgressDialog
 
 
 class OperationsDialog(QDialog):
@@ -427,80 +425,22 @@ class OperationsDialog(QDialog):
             QMessageBox.information(self, "Info", "No operations to preview.")
             return
 
-        # Create worker thread for preview
-        self.worker = WorkerThread(
-            func=self._run_preview_operations,
-            args=(self.input_df.copy(),)
-        )
-        
-        # Create progress dialog
-        self.progress_dialog = ProgressDialog("Previewing operations...", self, allow_cancel=True)
-        
-        # Connect signals
-        self.worker.progress.connect(self.progress_dialog.set_progress)
-        self.worker.status.connect(self.progress_dialog.set_status)
-        self.worker.completed.connect(self._on_preview_complete)
-        self.worker.error.connect(self._on_preview_error)
-        self.worker.cancelled.connect(self._on_preview_cancelled)
-        
-        # Set cancel callback
-        self.progress_dialog.set_cancel_callback(self.worker.request_cancel)
-        
-        # Start worker
-        self.worker.start()
-        
-        # Show progress dialog
-        self.progress_dialog.exec()
-    
-    def _run_preview_operations(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Run preview operations in worker thread."""
-        preview_df = df.copy()
-        for op in self.operations_sequence:
-            preview_df, _ = self._apply_operation(preview_df, op)
-        return preview_df
-    
-    def _on_preview_complete(self, result):
-        """Handle preview completion."""
-        preview_df = result
-        msg = f"Preview Result:\n"
-        msg += f"Shape: {preview_df.shape}\n"
-        msg += f"Columns: {', '.join(preview_df.columns.tolist()[:5])}"
-        if len(preview_df.columns) > 5:
-            msg += f" ... ({len(preview_df.columns)} total)"
-
-        self.progress_dialog.accept()
-        QMessageBox.information(self, "Preview", msg)
-        self.worker.quit()
-        self.worker.wait()
-    
-    def _on_preview_cancelled(self):
-        """Handle preview cancellation."""
-        self.worker.quit()
-        self.worker.wait()
-        self.progress_dialog.accept()
-        QMessageBox.information(self, "Cancelled", "Preview operation was cancelled.")
-    
-    def _on_preview_error(self, error_msg: str):
-        """Handle preview error."""
-        self.worker.quit()
-        self.worker.wait()
-        self.progress_dialog.accept()
-        QMessageBox.critical(self, "Error", f"Error during preview:\n\n{error_msg}")
-
-    def _apply_operations(self):
-        """Apply all operations sequentially (worker thread version)."""
-        result_df = self.input_df.copy()
-        operations_configs = []
-
-        for op in self.operations_sequence:
-            result_df, config = self._apply_operation(result_df, op)
-            operations_configs.append(config)
-
-        self.result_df = result_df
-        self.result_config = {
-            "operations": operations_configs
-        }
-        return result_df, operations_configs
+        try:
+            # Run operations synchronously
+            preview_df = self.input_df.copy()
+            for op in self.operations_sequence:
+                preview_df, _ = self._apply_operation(preview_df, op)
+            
+            # Show preview result
+            msg = f"Preview Result:\n"
+            msg += f"Shape: {preview_df.shape}\n"
+            msg += f"Columns: {', '.join(preview_df.columns.tolist()[:5])}"
+            if len(preview_df.columns) > 5:
+                msg += f" ... ({len(preview_df.columns)} total)"
+            
+            QMessageBox.information(self, "Preview", msg)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error during preview:\n\n{str(e)}")
 
     def _apply_operation(
         self, df: pd.DataFrame, op: Dict
@@ -556,68 +496,32 @@ class OperationsDialog(QDialog):
             QMessageBox.warning(self, "Warning", "No operations to apply.")
             return
 
-        # Create worker thread for applying operations
-        self.worker = WorkerThread(
-            func=self._apply_operations
-        )
-        
-        # Create progress dialog
-        self.progress_dialog = ProgressDialog("Applying operations...", self, allow_cancel=True)
-        
-        # Connect signals
-        self.worker.progress.connect(self.progress_dialog.set_progress)
-        self.worker.status.connect(self.progress_dialog.set_status)
-        self.worker.completed.connect(self._on_save_complete)
-        self.worker.error.connect(self._on_save_error)
-        self.worker.cancelled.connect(self._on_save_cancelled)
-        
-        # Set cancel callback
-        self.progress_dialog.set_cancel_callback(self.worker.request_cancel)
-        
-        # Start worker
-        self.worker.start()
-        
-        # Show progress dialog
-        self.progress_dialog.exec()
+        try:
+            # Run operations synchronously
+            result_df = self.input_df.copy()
+            operations_configs = []
+            
+            for op in self.operations_sequence:
+                result_df, config = self._apply_operation(result_df, op)
+                operations_configs.append(config)
+            
+            self.result_df = result_df
+            self.result_config = {"operations": operations_configs}
+            
+            # Show success message
+            QMessageBox.information(
+                self,
+                "Success",
+                f"Operations applied successfully!\n"
+                f"Result shape: {self.result_df.shape}\n"
+                f"Result saved.",
+            )
+            self.accept()
+        except Exception as e:
+            QMessageBox.critical(
+                self, "Error", f"Error applying operations:\n\n{str(e)}"
+            )
     
-    def _on_save_complete(self, result):
-        """Handle save completion."""
-        result_df, operations_configs = result
-        
-        if self.result_df is None:
-            self.progress_dialog.accept()
-            QMessageBox.critical(self, "Error", "Failed to apply operations.")
-            return
-
-        self.progress_dialog.accept()
-        QMessageBox.information(
-            self,
-            "Success",
-            f"Operations applied successfully!\n"
-            f"Result shape: {self.result_df.shape}\n"
-            f"Result saved.",
-        )
-        
-        self.worker.quit()
-        self.worker.wait()
-        self.accept()
-    
-    def _on_save_cancelled(self):
-        """Handle save cancellation."""
-        self.worker.quit()
-        self.worker.wait()
-        self.progress_dialog.accept()
-        QMessageBox.information(self, "Cancelled", "Operations were cancelled.")
-    
-    def _on_save_error(self, error_msg: str):
-        """Handle save error."""
-        self.worker.quit()
-        self.worker.wait()
-        self.progress_dialog.accept()
-        QMessageBox.critical(
-            self, "Error", f"Error applying operations:\n\n{error_msg}"
-        )
-
     def get_results(self) -> Tuple[Optional[pd.DataFrame], Optional[Dict]]:
         """Get the resulting dataframe and operation config."""
         return self.result_df, self.result_config

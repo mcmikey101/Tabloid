@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from storage.file_store import FileStore
 from experiments.registry import ExperimentManager
+from core.dataset_manager import DatasetManager
 import pickle
 
 
@@ -47,9 +48,10 @@ class ExperimentsPage(QWidget):
         self._load_initial_data()
     
     def showEvent(self, event):
-        """Reload experiments data when page is shown."""
+        """Reload experiments data and refresh dataset filter when page is shown."""
         super().showEvent(event)
         self._reload_all_experiments()
+        self._refresh_dataset_filter()
 
     # ---------------------------------------------------------
     # UI Construction
@@ -96,7 +98,7 @@ class ExperimentsPage(QWidget):
             "Dataset",
             "Version",
             "Model",
-            "Accuracy",
+            "Main Metric",
             "Date"
         ])
 
@@ -210,6 +212,45 @@ class ExperimentsPage(QWidget):
         except Exception as e:
             # Silently ignore errors during reload
             pass
+    
+    def _refresh_dataset_filter(self):
+        """Refresh dataset filter combo to include any new datasets."""
+        try:
+            # Get currently selected filter
+            current_filter = self.dataset_filter.currentText()
+            
+            # Get all available datasets (including those without experiments)
+            dataset_manager = DatasetManager()
+            available_datasets = set(dataset_manager.list_datasets())
+            
+            # Check current items
+            current_items = set(self.dataset_filter.itemText(i) for i in range(self.dataset_filter.count()))
+            
+            # If there are any items, remove the "All" marker for comparison
+            if "All" in current_items:
+                current_items.discard("All")
+            
+            if available_datasets != current_items:
+                # Rebuild the filter combo
+                selected_index = self.dataset_filter.currentIndex()
+                self.dataset_filter.clear()
+                self.dataset_filter.addItem("All")
+                self.dataset_filter.addItems(sorted(available_datasets))
+                
+                # Try to restore selection
+                if current_filter and current_filter != "All":
+                    index = self.dataset_filter.findText(current_filter)
+                    if index >= 0:
+                        self.dataset_filter.setCurrentIndex(index)
+                    else:
+                        self.dataset_filter.setCurrentIndex(0)
+                else:
+                    if selected_index < 0:
+                        selected_index = 0
+                    self.dataset_filter.setCurrentIndex(min(selected_index, self.dataset_filter.count() - 1))
+        except Exception as e:
+            # Silently ignore errors during refresh
+            pass
 
     def _display_experiments(self, experiments: dict):
         """Display experiments in the table."""
@@ -224,9 +265,13 @@ class ExperimentsPage(QWidget):
             self.table.setItem(row, 2, QTableWidgetItem(dataset.get("version", "")))
             self.table.setItem(row, 3, QTableWidgetItem(data.get("model_type", "")))
             
-            # Try to get accuracy, default to empty
-            accuracy = metrics.get("accuracy", metrics.get("r2_score", ""))
-            self.table.setItem(row, 4, QTableWidgetItem(str(accuracy) if accuracy else ""))
+            # Get the first metric from the metrics dictionary (works for all task types)
+            # Classification: accuracy, Regression: mse, Clustering: silhouette_score
+            main_metric = ""
+            if metrics:
+                first_metric_value = next(iter(metrics.values()))
+                main_metric = str(first_metric_value) if first_metric_value is not None else ""
+            self.table.setItem(row, 4, QTableWidgetItem(main_metric))
             
             # Format timestamp
             timestamp = data.get("timestamp", "")

@@ -27,8 +27,6 @@ from core.version_manager import VersionManager
 
 from core import modeling
 from core import evaluation
-from core.worker_thread import WorkerThread
-from ui.dialogs.progress_dialog import ProgressDialog
 from experiments.registry import ExperimentManager
 
 import pickle 
@@ -67,6 +65,11 @@ class MLLabPage(QWidget):
         self._load_datasets()
         self._on_version_changed("raw")
         self._on_task_changed("Classification")
+
+    def showEvent(self, event):
+        """Refresh dataset list when page is shown."""
+        super().showEvent(event)
+        self._refresh_datasets()
 
     # ---------------------------------------------------------
     # UI
@@ -189,6 +192,29 @@ class MLLabPage(QWidget):
         """Load available datasets into combo box."""
         datasets = self.dataset_manager.list_datasets()
         self.dataset_combo.addItems(datasets)
+
+    def _refresh_datasets(self):
+        """Refresh the datasets list (called when page is shown)."""
+        try:
+            current_dataset = self.dataset_combo.currentText()
+            datasets = self.dataset_manager.list_datasets()
+            
+            # Check if dataset list has changed
+            current_items = [self.dataset_combo.itemText(i) for i in range(self.dataset_combo.count())]
+            
+            if set(current_items) != set(datasets):
+                # Dataset list has changed, refresh it
+                self.dataset_combo.clear()
+                self.dataset_combo.addItems(datasets)
+                
+                # Try to restore previous selection, or select first item
+                if current_dataset in datasets:
+                    index = self.dataset_combo.findText(current_dataset)
+                    self.dataset_combo.setCurrentIndex(index)
+                else:
+                    self.dataset_combo.setCurrentIndex(0)
+        except Exception as e:
+            print(f"Error refreshing datasets: {e}")
 
     def _on_dataset_changed(self, dataset_name):
         """Update versions when dataset changes."""
@@ -783,133 +809,100 @@ class MLLabPage(QWidget):
             QMessageBox.warning(self, "Warning", "Please select a target column.")
             return
 
-        # Prepare training parameters
-        training_params = {
-            "df": self.current_df.copy(),
-            "task": task,
-            "model": model,
-            "target_col": target_col,
-        }
-        
-        # Create worker thread for training
-        self.training_worker = WorkerThread(
-            func=self._run_training,
-            args=(training_params,)
-        )
-        
-        # Create progress dialog
-        self.training_progress = ProgressDialog(f"Training {model}...", self, allow_cancel=True)
-        
-        # Connect signals
-        self.training_worker.progress.connect(self.training_progress.set_progress)
-        self.training_worker.status.connect(self.training_progress.set_status)
-        self.training_worker.completed.connect(self._on_training_complete)
-        self.training_worker.error.connect(self._on_training_error)
-        self.training_worker.cancelled.connect(self._on_training_cancelled)
-        
-        # Set cancel callback
-        self.training_progress.set_cancel_callback(self.training_worker.request_cancel)
-        
-        # Disable training button
-        self.train_button.setEnabled(False)
-        
-        # Start worker
-        self.training_worker.start()
-        
-        # Show progress dialog
-        self.training_progress.exec()
-    
-    def _on_training_complete(self, result):
-        """Handle training completion."""
-        self.train_button.setEnabled(True)
-        
-        # Update model state
-        self.current_model = result["model"]
-        if "df" in result:
-            self.current_df = result["df"]
-        if "splits" in result:
-            self.current_splits = result["splits"]
-        
-        # Display metrics
-        self.display_metrics(result["metrics"])
-        self.export_button.setEnabled(True)
-        
-        # Close progress dialog
-        self.training_progress.accept()
-        
-        # Save experiment
         try:
-            dataset_name = self.dataset_combo.currentText()
-            version_name = self.version_combo.currentText()
-            model_name = result["model_name"]
-            task = result["task"]
+            # Disable training button during training
+            self.train_button.setEnabled(False)
             
-            # Build hyperparameters dict from UI
-            hyperparams = self._get_current_hyperparameters()
+            # Run training synchronously
+            result = self._run_training({
+                "df": self.current_df.copy(),
+                "task": task,
+                "model": model,
+                "target_col": target_col,
+            })
             
-            # Save experiment with model
-            experiment_id = self.experiment_manager.create_experiment(
-                dataset_name=dataset_name,
-                dataset_version=version_name,
-                model_type=model_name,
-                hyperparameters=hyperparams,
-                metrics=result["metrics"],
-                random_seed=self.random_seed.value(),
-                model_object=self.current_model,
-                notes=f"Training task: {task}"
-            )
+            # Handle training completion
+            self.train_button.setEnabled(True)
             
-            # Show experiment saved notification
-            QMessageBox.information(
+            # Update model state
+            self.current_model = result["model"]
+            if "df" in result:
+                self.current_df = result["df"]
+            if "splits" in result:
+                self.current_splits = result["splits"]
+            
+            # Display metrics
+            self.display_metrics(result["metrics"])
+            self.export_button.setEnabled(True)
+            
+            # Ask user if they want to save the experiment
+            save_experiment = QMessageBox.question(
                 self,
-                "Experiment Saved",
-                f"Experiment successfully saved!\n"
-                f"Experiment ID: {experiment_id}"
-            )
-        except Exception as e:
-            QMessageBox.warning(
-                self,
-                "Warning",
-                f"Model trained but failed to save experiment:\n{str(e)}\n\n"
-                f"You can still use the model in this session."
-            )
-        
-        # Determine success message
-        if result["task"] == "Clustering":
-            QMessageBox.information(self, "Success", "Clustering completed!")
-            
-            # Prompt to save as version for clustering
-            save_version = QMessageBox.question(
-                self,
-                "Save as Version",
-                "Do you want to save this clustered dataset as a new version?",
+                "Save Experiment",
+                "Do you want to save this experiment?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             )
             
-            if save_version == QMessageBox.StandardButton.Yes:
-                self._save_clustering_as_version(result["labels"], result["model_name"])
-        else:
-            QMessageBox.information(self, "Success", "Model training completed!")
+            if save_experiment == QMessageBox.StandardButton.Yes:
+                try:
+                    dataset_name = self.dataset_combo.currentText()
+                    version_name = self.version_combo.currentText()
+                    model_name = result["model_name"]
+                    task = result["task"]
+                    
+                    # Build hyperparameters dict from UI
+                    hyperparams = self._get_current_hyperparameters()
+                    
+                    # Build description with training task
+                    notes = f"Training task: {task}"
+                    
+                    # Save experiment with model
+                    experiment_id = self.experiment_manager.create_experiment(
+                        dataset_name=dataset_name,
+                        dataset_version=version_name,
+                        model_type=model_name,
+                        hyperparameters=hyperparams,
+                        metrics=result["metrics"],
+                        random_seed=self.random_seed.value(),
+                        model_object=self.current_model,
+                        notes=notes
+                    )
+                    
+                    # Show experiment saved notification
+                    QMessageBox.information(
+                        self,
+                        "Experiment Saved",
+                        f"Experiment successfully saved!\n"
+                        f"Experiment ID: {experiment_id}"
+                    )
+                except Exception as e:
+                    QMessageBox.warning(
+                        self,
+                        "Warning",
+                        f"Model trained but failed to save experiment:\n{str(e)}\n\n"
+                        f"You can still use the model in this session."
+                    )
+            
+            # Determine success message
+            if result["task"] == "Clustering":
+                QMessageBox.information(self, "Success", "Clustering completed!")
+                
+                # Prompt to save as version for clustering
+                save_version = QMessageBox.question(
+                    self,
+                    "Save as Version",
+                    "Do you want to save this clustered dataset as a new version?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+                
+                if save_version == QMessageBox.StandardButton.Yes:
+                    self._save_clustering_as_version(result["labels"], result["model_name"])
+            else:
+                QMessageBox.information(self, "Success", "Model training completed!")
         
-        # Clean up worker
-        self.training_worker.quit()
-        self.training_worker.wait()
-    
-    def _on_training_cancelled(self):
-        """Handle training cancellation."""
-        self.train_button.setEnabled(True)
-        self.training_worker.quit()
-        self.training_worker.wait()
-        self.training_progress.accept()
-        QMessageBox.information(self, "Cancelled", "Training operation was cancelled.")
-    
-    def _on_training_error(self, error_msg: str):
-        """Handle training error."""
-        self.train_button.setEnabled(True)
-        self.training_worker.quit()
-        self.training_worker.wait()
-        self.training_progress.accept()
-        QMessageBox.critical(self, "Training Error", f"Failed to train model:\n\n{error_msg}")
+        except Exception as e:
+            self.train_button.setEnabled(True)
+            QMessageBox.critical(self, "Error", f"Error during training:\n\n{str(e)}")
 
     # ---------------------------------------------------------
     # Metrics
@@ -928,11 +921,19 @@ class MLLabPage(QWidget):
     def display_metrics(self, metrics: dict):
         """Display metrics in text area."""
         lines = []
+        first_metric = True
         for key, value in metrics.items():
-            if isinstance(value, float):
-                lines.append(f"{key}: {value:.4f}")
+            # Rename first metric to "Main Metric"
+            if first_metric:
+                display_key = "Main Metric"
+                first_metric = False
             else:
-                lines.append(f"{key}: {value}")
+                display_key = key
+            
+            if isinstance(value, float):
+                lines.append(f"{display_key}: {value:.4f}")
+            else:
+                lines.append(f"{display_key}: {value}")
 
         self.metrics_text.setText("\n".join(lines))
 
@@ -1003,11 +1004,6 @@ class MLLabPage(QWidget):
         # Navigate to experiments page (index 1 in QStackedWidget)
         if hasattr(main_window, 'pages'):
             main_window.pages.setCurrentIndex(1)
-            QMessageBox.information(
-                self,
-                "Experiments Page",
-                "Check the Experiments page to browse or export your trained model."
-            )
     
     def _update_datasets_page_version_tree(self, dataset_name: str):
         """Update version tree on datasets page after new version is created."""

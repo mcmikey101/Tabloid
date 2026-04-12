@@ -21,6 +21,7 @@ from ui.widgets.column_stats import ColumnStatsWidget
 from ui.widgets.distribution_plot import DistributionPlotWidget
 from ui.dialogs.operations_dialog import OperationsDialog
 from ui.dialogs.synthesis_dialog import SynthesisDialog
+from ui.dialogs.compare_plots_dialog import ComparisonPlotsDialog
 
 from storage.file_store import FileStore
 from core.dataset_manager import DatasetManager
@@ -87,11 +88,13 @@ class DatasetsPage(QWidget):
         self.synthesize_btn = QPushButton("Synthesize")
         self.export_btn = QPushButton("Export")
         self.train_model_btn = QPushButton("Train Model")
+        self.compare_plots_btn = QPushButton("Compare Plots")
 
         layout.addWidget(self.operations_btn)
         layout.addWidget(self.synthesize_btn)
         layout.addWidget(self.export_btn)
         layout.addWidget(self.train_model_btn)
+        layout.addWidget(self.compare_plots_btn)
 
         return layout
 
@@ -154,6 +157,7 @@ class DatasetsPage(QWidget):
         self.synthesize_btn.clicked.connect(self.open_synthesis_dialog)
         self.export_btn.clicked.connect(self.export_version)
         self.train_model_btn.clicked.connect(self.open_train_model)
+        self.compare_plots_btn.clicked.connect(self.open_compare_plots_dialog)
         self.delete_version_btn.clicked.connect(self.delete_current_version)
         self.delete_dataset_btn.clicked.connect(self.delete_current_dataset)
 
@@ -305,6 +309,24 @@ class DatasetsPage(QWidget):
                 )
 
     
+
+    def open_compare_plots_dialog(self):
+        """Open the comparison plots dialog."""
+        if self.current_dataset is None:
+            QMessageBox.warning(
+                self,
+                "Warning",
+                "Please load a dataset first."
+            )
+            return
+
+        dialog = ComparisonPlotsDialog(
+            self.version_manager,
+            self.file_store,
+            self.current_dataset,
+            self
+        )
+        dialog.exec()
 
     # -----------------------------------------------------
     # Dataset Loading
@@ -568,7 +590,6 @@ class DatasetsPage(QWidget):
             self.dataset_label.setText("Dataset: None")
             self.version_label.setText("Version: None")
             self.data_table.table.setRowCount(0)
-            self.distribution_plot.column_selector.clear()
             self.distribution_plot.figure.clear()
             self.distribution_plot.canvas.draw()
             self.version_tree.tree.clear()
