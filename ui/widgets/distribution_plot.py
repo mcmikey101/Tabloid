@@ -105,29 +105,7 @@ class DistributionPlotWidget(QWidget):
         plot_layout.addWidget(self.canvas)
         
         self.tabs.addTab(plot_widget, "Distribution")
-        
-        # Metadata tab
-        metadata_widget = QWidget()
-        metadata_widget.setStyleSheet("background-color: #262738;")
-        metadata_layout = QVBoxLayout(metadata_widget)
-        
-        self.metadata_text = QTextEdit()
-        self.metadata_text.setReadOnly(True)
-        self.metadata_text.setStyleSheet("""
-            QTextEdit {
-                font-family: 'JetBrains Mono', 'Courier New', monospace;
-                font-size: 12px;
-                background-color: #262738;
-                color: #e0e0e0;
-                padding: 12px;
-                border: 1px solid #3a3d4a;
-                border-radius: 3px;
-            }
-        """)
-        metadata_layout.addWidget(self.metadata_text)
-        
-        self.tabs.addTab(metadata_widget, "Version Info")
-        
+
         # Scatter plot tab
         scatter_widget = QWidget()
         scatter_widget.setStyleSheet("background-color: #262738;")
@@ -182,6 +160,28 @@ class DistributionPlotWidget(QWidget):
         scatter_layout.addWidget(self.scatter_canvas)
         
         self.tabs.addTab(scatter_widget, "Scatter Plot")
+        
+        # Metadata tab
+        metadata_widget = QWidget()
+        metadata_widget.setStyleSheet("background-color: #262738;")
+        metadata_layout = QVBoxLayout(metadata_widget)
+        
+        self.metadata_text = QTextEdit()
+        self.metadata_text.setReadOnly(True)
+        self.metadata_text.setStyleSheet("""
+            QTextEdit {
+                font-family: 'JetBrains Mono', 'Courier New', monospace;
+                font-size: 12px;
+                background-color: #262738;
+                color: #e0e0e0;
+                padding: 12px;
+                border: 1px solid #3a3d4a;
+                border-radius: 3px;
+            }
+        """)
+        metadata_layout.addWidget(self.metadata_text)
+        
+        self.tabs.addTab(metadata_widget, "Version Info")
         
         layout.addWidget(self.tabs)
         

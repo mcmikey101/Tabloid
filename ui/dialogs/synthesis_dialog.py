@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QComboBox, QPushButton, QMessageBox
 from PySide6.QtCore import Qt
 import pandas as pd
+import time
 
 from core import synthesis
 from core.worker_thread import WorkerThread
@@ -116,13 +117,8 @@ class SynthesisDialog(QDialog):
         self.synthesize_btn.setEnabled(True)
         self.progress_dialog.accept()
         
-        # Clean up worker
-        try:
-            if hasattr(self, 'worker') and self.worker:
-                self.worker.quit()
-                self.worker.wait(timeout=1000)
-        except Exception as e:
-            print(f"Error cleaning up worker: {e}")
+        # Clean up worker - non-blocking
+        self._cleanup_worker(timeout_ms=1000)
         
         self.accept()
     
@@ -138,13 +134,8 @@ class SynthesisDialog(QDialog):
             self.progress_dialog.mark_cancelled()
             self.progress_dialog.accept()
         
-        # Clean up worker resources
-        try:
-            if hasattr(self, 'worker') and self.worker:
-                self.worker.quit()
-                self.worker.wait(timeout=1000)
-        except Exception as e:
-            print(f"Error cleaning up worker: {e}")
+        # Clean up worker - non-blocking
+        self._cleanup_worker(request_cancel=True, timeout_ms=1000)
         
         # Show cancellation message
         QMessageBox.information(self, "Cancelled", "Synthesis operation was cancelled.")
@@ -158,13 +149,8 @@ class SynthesisDialog(QDialog):
         self.synthesize_btn.setEnabled(True)
         self.progress_dialog.accept()
         
-        # Clean up worker
-        try:
-            if hasattr(self, 'worker') and self.worker:
-                self.worker.quit()
-                self.worker.wait(timeout=1000)
-        except Exception as e:
-            print(f"Error cleaning up worker: {e}")
+        # Clean up worker - non-blocking
+        self._cleanup_worker(timeout_ms=1000)
         
         QMessageBox.critical(
             self,
@@ -176,16 +162,50 @@ class SynthesisDialog(QDialog):
         """Handle dialog close event."""
         self._is_active = False
         
-        # Clean up worker if still running
-        try:
-            if hasattr(self, 'worker') and self.worker and self.worker.isRunning():
-                self.worker.request_cancel()
-                self.worker.quit()
-                self.worker.wait(timeout=1000)
-        except Exception as e:
-            print(f"Error cleaning up worker on close: {e}")
+        # Clean up worker if still running - non-blocking
+        self._cleanup_worker(request_cancel=True, timeout_ms=500)
         
         super().closeEvent(event)
+
+    def _cleanup_worker(self, request_cancel=False, timeout_ms=1000):
+        """
+        Clean up worker thread safely without blocking UI.
+        
+        Args:
+            request_cancel: If True, request cancellation before quitting
+            timeout_ms: Timeout in milliseconds for the thread to finish
+        """
+        if not hasattr(self, 'worker') or not self.worker:
+            return
+        
+        try:
+            if request_cancel and self.worker.isRunning():
+                self.worker.request_cancel()
+            
+            # Request the thread to quit
+            self.worker.quit()
+            
+            # Don't wait indefinitely - use a reasonable wait time
+            # PySide6's wait() doesn't support timeout, so we check repeatedly
+            start_time = time.time()
+            timeout_s = timeout_ms / 1000.0
+            
+            while self.worker.isRunning() and time.time() - start_time < timeout_s:
+                time.sleep(0.01)
+            
+            # If the thread is still running, force clean up
+            if self.worker.isRunning():
+                print("Warning: Worker thread did not finish, forcing cleanup")
+                # Try to force the process to stop
+                if hasattr(self.worker, '_process') and self.worker._process:
+                    if self.worker._process.is_alive():
+                        self.worker._process.terminate()
+                        self.worker._process.join(timeout=1)
+                        if self.worker._process.is_alive():
+                            self.worker._process.kill()
+                            self.worker._process.join(timeout=1)
+        except Exception as e:
+            print(f"Error cleaning up worker: {e}")
 
     def get_results(self) -> tuple:
         """Return synthesized dataframe and config."""

@@ -176,11 +176,12 @@ class WorkerThread(QThread):
                     self.cancelled.emit()
                     return
             
-            # Process any remaining messages after process exits
+            # Process any remaining messages after process exits with timeout to prevent deadlocks
             if self._process:
-                while True:
+                cleanup_deadline = time.time() + 2.0  # 2 second timeout for cleanup
+                while time.time() < cleanup_deadline:
                     try:
-                        msg_type, msg_data = self._output_queue.get(timeout=0.1)
+                        msg_type, msg_data = self._output_queue.get(timeout=0.05)
                         self._handle_message(msg_type, msg_data)
                     except queue.Empty:
                         break
@@ -191,6 +192,24 @@ class WorkerThread(QThread):
             if not self._cancel_requested:
                 error_msg = f"{type(e).__name__}: {str(e)}\n\n{traceback.format_exc()}"
                 self.error.emit(error_msg)
+        finally:
+            # Ensure queue and process are cleaned up
+            try:
+                if self._output_queue:
+                    self._output_queue.close()
+                    self._output_queue.join_thread()
+            except Exception:
+                pass
+            
+            try:
+                if self._process and self._process.is_alive():
+                    self._process.terminate()
+                    self._process.join(timeout=1)
+                    if self._process.is_alive():
+                        self._process.kill()
+                        self._process.join(timeout=1)
+            except Exception:
+                pass
     
     def _handle_message(self, msg_type: str, msg_data: Any):
         """Handle a message from the worker process."""
