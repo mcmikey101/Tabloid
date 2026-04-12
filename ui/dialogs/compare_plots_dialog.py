@@ -20,7 +20,11 @@ class ComparisonPlotsDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Compare Plots")
         self.setModal(True)
-        self.setGeometry(100, 100, 1200, 700)
+        # Responsive sizing: use 80% of screen or min 900x600
+        screen_geometry = self.screen().geometry()
+        width = max(900, int(screen_geometry.width() * 0.8))
+        height = max(600, int(screen_geometry.height() * 0.85))
+        self.setGeometry(100, 100, width, height)
         self.version_manager = version_manager
         self.file_store = file_store
         self.dataset_name = dataset_name
@@ -40,125 +44,104 @@ class ComparisonPlotsDialog(QDialog):
     def _init_ui(self):
         """Initialize the UI."""
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(8, 8, 8, 8)  # Reduce margins
+        layout.setSpacing(4)  # Reduce spacing between items
         
-        # Version selection for column 1
-        version1_layout = QHBoxLayout()
-        version1_label = QLabel("Version 1:")
-        version1_label.setStyleSheet("color: #e0e0e0; font-weight: bold;")
+        # First row: Version 1 and Column 1
+        row1_layout = QHBoxLayout()
+        row1_layout.setSpacing(4)
+        version1_label = QLabel("V1:")
+        version1_label.setStyleSheet("color: #e0e0e0;")
         self.version1_combo = QComboBox()
         self.version1_combo.currentTextChanged.connect(self._on_version1_changed)
-        version1_layout.addWidget(version1_label)
-        version1_layout.addWidget(self.version1_combo)
-        version1_layout.addStretch()
-        layout.addLayout(version1_layout)
-        
-        # Column 1 selection
-        col1_layout = QHBoxLayout()
-        col1_label = QLabel("Column 1:")
-        col1_label.setStyleSheet("color: #e0e0e0; font-weight: bold;")
+        self.version1_combo.setMaximumWidth(200)
+        col1_label = QLabel("Col1:")
+        col1_label.setStyleSheet("color: #e0e0e0;")
         self.col1_combo = QComboBox()
-        col1_layout.addWidget(col1_label)
-        col1_layout.addWidget(self.col1_combo)
-        col1_layout.addStretch()
-        layout.addLayout(col1_layout)
+        self.col1_combo.setMaximumWidth(200)
+        row1_layout.addWidget(version1_label)
+        row1_layout.addWidget(self.version1_combo)
+        row1_layout.addWidget(col1_label)
+        row1_layout.addWidget(self.col1_combo)
+        row1_layout.addStretch()
+        layout.addLayout(row1_layout)
         
-        # Version selection for column 2
-        version2_layout = QHBoxLayout()
-        version2_label = QLabel("Version 2:")
-        version2_label.setStyleSheet("color: #e0e0e0; font-weight: bold;")
+        # Second row: Version 2 and Column 2
+        row2_layout = QHBoxLayout()
+        row2_layout.setSpacing(4)
+        version2_label = QLabel("V2:")
+        version2_label.setStyleSheet("color: #e0e0e0;")
         self.version2_combo = QComboBox()
         self.version2_combo.currentTextChanged.connect(self._on_version2_changed)
-        version2_layout.addWidget(version2_label)
-        version2_layout.addWidget(self.version2_combo)
-        version2_layout.addStretch()
-        layout.addLayout(version2_layout)
-        
-        # Column 2 selection
-        col2_layout = QHBoxLayout()
-        col2_label = QLabel("Column 2:")
-        col2_label.setStyleSheet("color: #e0e0e0; font-weight: bold;")
+        self.version2_combo.setMaximumWidth(200)
+        col2_label = QLabel("Col2:")
+        col2_label.setStyleSheet("color: #e0e0e0;")
         self.col2_combo = QComboBox()
-        col2_layout.addWidget(col2_label)
-        col2_layout.addWidget(self.col2_combo)
-        col2_layout.addStretch()
-        layout.addLayout(col2_layout)
+        self.col2_combo.setMaximumWidth(200)
+        row2_layout.addWidget(version2_label)
+        row2_layout.addWidget(self.version2_combo)
+        row2_layout.addWidget(col2_label)
+        row2_layout.addWidget(self.col2_combo)
+        row2_layout.addStretch()
+        layout.addLayout(row2_layout)
         
-        # Plot type selection
-        plot_type_layout = QHBoxLayout()
-        plot_type_label = QLabel("Plot Type:")
-        plot_type_label.setStyleSheet("color: #e0e0e0; font-weight: bold;")
+        # Third row: Plot Type and Scatter option
+        row3_layout = QHBoxLayout()
+        row3_layout.setSpacing(4)
+        plot_type_label = QLabel("Type:")
+        plot_type_label.setStyleSheet("color: #e0e0e0;")
         self.plot_type_combo = QComboBox()
         self.plot_type_combo.addItems(["Histogram", "Box Plot", "Violin Plot", "KDE Plot"])
-        plot_type_layout.addWidget(plot_type_label)
-        plot_type_layout.addWidget(self.plot_type_combo)
-        plot_type_layout.addStretch()
-        layout.addLayout(plot_type_layout)
-        
-        # Scatter plot options
-        self.scatter_option_label = QLabel("Scatter Plot:")
-        self.scatter_option_label.setStyleSheet("color: #e0e0e0; font-weight: bold;")
-        self.scatter_checkbox = QCheckBox("Compare Scatter Plots")
+        self.plot_type_combo.setMaximumWidth(150)
+        self.scatter_checkbox = QCheckBox("Scatter")
         self.scatter_checkbox.setStyleSheet("color: #e0e0e0;")
         self.scatter_checkbox.stateChanged.connect(self._on_scatter_option_changed)
+        row3_layout.addWidget(plot_type_label)
+        row3_layout.addWidget(self.plot_type_combo)
+        row3_layout.addSpacing(20)
+        row3_layout.addWidget(self.scatter_checkbox)
+        row3_layout.addStretch()
+        layout.addLayout(row3_layout)
         
-        scatter_layout = QHBoxLayout()
-        scatter_layout.addWidget(self.scatter_option_label)
-        scatter_layout.addWidget(self.scatter_checkbox)
-        scatter_layout.addStretch()
-        layout.addLayout(scatter_layout)
-        
-        # Scatter column selection widgets - single line layout
+        # Scatter column selection widgets - wrappable layout
         scatter_cols_layout = QHBoxLayout()
+        scatter_cols_layout.setSpacing(3)
         
-        # Version 1 scatter
-        scatter1_label = QLabel("V1 Columns:")
-        scatter1_label.setStyleSheet("color: #e0e0e0;")
-        self.scatter1_select_btn = QPushButton("Select...")
-        self.scatter1_select_btn.setStyleSheet("background-color: #5b7cfa; color: white; border: none; padding: 4px 8px; border-radius: 3px;")
+        # Version 1 scatter controls
+        self.scatter1_select_btn = QPushButton("V1 Select")
+        self.scatter1_select_btn.setStyleSheet("background-color: #5b7cfa; color: white; border: none; padding: 2px 6px; border-radius: 3px; font-size: 9px;")
+        self.scatter1_select_btn.setMaximumWidth(80)
         self.scatter1_select_btn.clicked.connect(self._show_scatter1_column_selection)
-        self.scatter1_cols_label = QLabel("None")
-        self.scatter1_cols_label.setStyleSheet("color: #999999; font-size: 10px;")
+        self.scatter1_cols_label = QLabel("-")
+        self.scatter1_cols_label.setStyleSheet("color: #999999; font-size: 9px;")
+        self.scatter1_cols_label.setMaximumWidth(80)
         
-        scatter_cols_layout.addWidget(scatter1_label)
-        scatter_cols_layout.addWidget(self.scatter1_select_btn)
-        scatter_cols_layout.addWidget(self.scatter1_cols_label)
-        scatter_cols_layout.addSpacing(10)
-        
-        # Color by for Version 1
-        color1_label = QLabel("Color V1:")
-        color1_label.setStyleSheet("color: #e0e0e0;")
         self.color_combo_v1 = QComboBox()
         self.color_combo_v1.addItem("None")
         self.color_combo_v1.currentTextChanged.connect(self._on_color_v1_changed)
-        self.color_combo_v1.setMaximumWidth(120)
+        self.color_combo_v1.setMaximumWidth(100)
         
-        scatter_cols_layout.addWidget(color1_label)
+        scatter_cols_layout.addWidget(self.scatter1_select_btn)
+        scatter_cols_layout.addWidget(self.scatter1_cols_label)
         scatter_cols_layout.addWidget(self.color_combo_v1)
-        scatter_cols_layout.addSpacing(20)
+        scatter_cols_layout.addSpacing(8)
         
-        # Version 2 scatter
-        scatter2_label = QLabel("V2 Columns:")
-        scatter2_label.setStyleSheet("color: #e0e0e0;")
-        self.scatter2_select_btn = QPushButton("Select...")
-        self.scatter2_select_btn.setStyleSheet("background-color: #5b7cfa; color: white; border: none; padding: 4px 8px; border-radius: 3px;")
+        # Version 2 scatter controls
+        self.scatter2_select_btn = QPushButton("V2 Select")
+        self.scatter2_select_btn.setStyleSheet("background-color: #5b7cfa; color: white; border: none; padding: 2px 6px; border-radius: 3px; font-size: 9px;")
+        self.scatter2_select_btn.setMaximumWidth(80)
         self.scatter2_select_btn.clicked.connect(self._show_scatter2_column_selection)
-        self.scatter2_cols_label = QLabel("None")
-        self.scatter2_cols_label.setStyleSheet("color: #999999; font-size: 10px;")
+        self.scatter2_cols_label = QLabel("-")
+        self.scatter2_cols_label.setStyleSheet("color: #999999; font-size: 9px;")
+        self.scatter2_cols_label.setMaximumWidth(80)
         
-        scatter_cols_layout.addWidget(scatter2_label)
-        scatter_cols_layout.addWidget(self.scatter2_select_btn)
-        scatter_cols_layout.addWidget(self.scatter2_cols_label)
-        scatter_cols_layout.addSpacing(10)
-        
-        # Color by for Version 2
-        color2_label = QLabel("Color V2:")
-        color2_label.setStyleSheet("color: #e0e0e0;")
         self.color_combo_v2 = QComboBox()
         self.color_combo_v2.addItem("None")
         self.color_combo_v2.currentTextChanged.connect(self._on_color_v2_changed)
-        self.color_combo_v2.setMaximumWidth(120)
+        self.color_combo_v2.setMaximumWidth(100)
         
-        scatter_cols_layout.addWidget(color2_label)
+        scatter_cols_layout.addWidget(self.scatter2_select_btn)
+        scatter_cols_layout.addWidget(self.scatter2_cols_label)
         scatter_cols_layout.addWidget(self.color_combo_v2)
         scatter_cols_layout.addStretch()
         
@@ -167,45 +150,52 @@ class ComparisonPlotsDialog(QDialog):
         self.scatter_cols_widget.setVisible(False)
         layout.addWidget(self.scatter_cols_widget)
         
-        # Plot canvas
-        self.figure = Figure(figsize=(10, 5), dpi=100, facecolor='#262738', edgecolor='#3a3d4a')
+        # Plot canvas - add to layout with proper stretch
+        self.figure = Figure(figsize=(10, 5), dpi=80, facecolor='#262738', edgecolor='#3a3d4a')
         self.figure.patch.set_facecolor('#262738')
+        self.figure.subplots_adjust(left=0.08, right=0.95, top=0.95, bottom=0.1)
         self.canvas = FigureCanvasQTAgg(self.figure)
-        layout.addWidget(self.canvas)
+        layout.addWidget(self.canvas, 1)  # Give plot area high stretch factor
         
         # Buttons
         button_layout = QHBoxLayout()
+        button_layout.setSpacing(3)
+        button_layout.setContentsMargins(0, 4, 0, 0)
         
-        refresh_btn = QPushButton("Refresh Plot")
+        refresh_btn = QPushButton("Refresh")
         refresh_btn.setStyleSheet("""
             QPushButton {
                 background-color: #5b7cfa;
                 color: white;
                 border: none;
-                padding: 6px 16px;
+                padding: 4px 10px;
                 border-radius: 3px;
                 font-weight: bold;
+                font-size: 10px;
             }
             QPushButton:hover {
                 background-color: #4c63d2;
             }
         """)
+        refresh_btn.setMaximumWidth(80)
         refresh_btn.clicked.connect(self._refresh_plot)
         
-        export_btn = QPushButton("Export Image")
+        export_btn = QPushButton("Export")
         export_btn.setStyleSheet("""
             QPushButton {
                 background-color: #51cf66;
                 color: white;
                 border: none;
-                padding: 6px 16px;
+                padding: 4px 10px;
                 border-radius: 3px;
                 font-weight: bold;
+                font-size: 10px;
             }
             QPushButton:hover {
                 background-color: #40c057;
             }
         """)
+        export_btn.setMaximumWidth(80)
         export_btn.clicked.connect(self._export_plot)
         
         close_btn = QPushButton("Close")
@@ -214,14 +204,16 @@ class ComparisonPlotsDialog(QDialog):
                 background-color: #868e96;
                 color: white;
                 border: none;
-                padding: 6px 16px;
+                padding: 4px 10px;
                 border-radius: 3px;
                 font-weight: bold;
+                font-size: 10px;
             }
             QPushButton:hover {
                 background-color: #748089;
             }
         """)
+        close_btn.setMaximumWidth(80)
         close_btn.clicked.connect(self.close)
         
         button_layout.addStretch()
