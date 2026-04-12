@@ -16,7 +16,8 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QDialog,
     QInputDialog,
-    QFileDialog
+    QFileDialog,
+    QScrollArea
 )
 from PySide6.QtCore import Qt
 from storage.file_store import FileStore
@@ -58,11 +59,26 @@ class ExperimentsPage(QWidget):
     # ---------------------------------------------------------
 
     def _build_ui(self):
-        layout = QVBoxLayout(self)
+        root_layout = QVBoxLayout(self)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Create scroll area for responsive layout on small screens
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setStyleSheet("QScrollArea { background-color: #262738; border: none; }")
+        
+        # Create content widget to hold all sections
+        content = QWidget()
+        layout = QVBoxLayout(content)
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(6)
 
         layout.addWidget(self._create_filters())
         layout.addWidget(self._create_experiments_table())
         layout.addWidget(self._create_details_panel())
+        
+        scroll.setWidget(content)
+        root_layout.addWidget(scroll)
 
     # ---------------------------------------------------------
     # Filters

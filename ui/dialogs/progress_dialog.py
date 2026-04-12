@@ -2,7 +2,7 @@
 Progress dialog for displaying long-running operation status.
 """
 
-from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QProgressBar, QPushButton
+from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QProgressBar, QPushButton, QApplication
 from PySide6.QtCore import Qt, QTimer
 from typing import Optional, Callable
 
@@ -25,7 +25,18 @@ class ProgressDialog(QDialog):
         self.setWindowTitle(title)
         self.setModal(True)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowCloseButtonHint)  # Hide X button
-        self.resize(400, 150)
+        
+        # Set responsive dialog size based on screen
+        screen = QApplication.primaryScreen().availableGeometry()
+        width = max(500, int(screen.width() * 0.4))
+        height = max(200, int(screen.height() * 0.25))
+        self.resize(width, height)
+        self.setMinimumSize(400, 150)
+        
+        # Center dialog on screen
+        geometry = self.frameGeometry()
+        geometry.moveCenter(screen.center())
+        self.move(geometry.topLeft())
         
         self.allow_cancel = allow_cancel
         self._cancel_callback: Optional[Callable] = None

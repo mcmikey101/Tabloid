@@ -98,9 +98,11 @@ class DistributionPlotWidget(QWidget):
         self.column_label.setStyleSheet("color: #999999; font-size: 10px;")
         plot_layout.addWidget(self.column_label)
 
-        # Figure for plotting
-        self.figure = Figure(figsize=(8, 4), dpi=100, facecolor='#262738', edgecolor='#3a3d4a')
+        # Figure for plotting - responsive sizing
+        # Use smaller figsize; will adapt better to container
+        self.figure = Figure(figsize=(7, 4), dpi=90, facecolor='#262738', edgecolor='#3a3d4a')
         self.figure.patch.set_facecolor('#262738')
+        self.figure.subplots_adjust(left=0.1, right=0.95, top=0.92, bottom=0.15)
         self.canvas = FigureCanvasQTAgg(self.figure)
         plot_layout.addWidget(self.canvas)
         
@@ -153,9 +155,10 @@ class DistributionPlotWidget(QWidget):
         
         scatter_layout.addLayout(controls_layout)
         
-        # Scatter figure
-        self.scatter_figure = Figure(figsize=(8, 4), dpi=100, facecolor='#262738', edgecolor='#3a3d4a')
+        # Scatter figure - responsive sizing
+        self.scatter_figure = Figure(figsize=(7, 4), dpi=90, facecolor='#262738', edgecolor='#3a3d4a')
         self.scatter_figure.patch.set_facecolor('#262738')
+        self.scatter_figure.subplots_adjust(left=0.1, right=0.95, top=0.92, bottom=0.15)
         self.scatter_canvas = FigureCanvasQTAgg(self.scatter_figure)
         scatter_layout.addWidget(self.scatter_canvas)
         

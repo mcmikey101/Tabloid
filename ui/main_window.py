@@ -7,15 +7,15 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QPushButton,
     QStackedWidget,
-    QSizePolicy
+    QSizePolicy,
+    QApplication
 )
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon
 
 from ui.pages.datasets_page import DatasetsPage
 from ui.pages.experiments_page import ExperimentsPage
 from ui.pages.ml_lab_page import MLLabPage
-
-from PySide6.QtGui import QIcon
 
 import os
 
@@ -25,7 +25,19 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("Tabloid")
-        self.resize(1400, 900)
+        
+        # Set responsive window size based on screen geometry
+        screen = QApplication.primaryScreen().availableGeometry()
+        default_width = min(1200, int(screen.width() * 0.9))
+        default_height = min(800, int(screen.height() * 0.9))
+        
+        self.resize(default_width, default_height)
+        self.setMinimumSize(960, 600)  # Minimum usable size
+        
+        # Center window on screen
+        geometry = self.frameGeometry()
+        geometry.moveCenter(screen.center())
+        self.move(geometry.topLeft())
 
         # Set window icon for taskbar
         icon_path = os.path.join(os.path.dirname(__file__), '../assets/tabloid_icon.png')
@@ -54,9 +66,19 @@ class MainWindow(QMainWindow):
 
     def _create_sidebar(self):
         sidebar = QWidget()
-        sidebar.setFixedWidth(200)
+        
+        # Make sidebar responsive: fixed on larger screens, narrower on smaller
+        screen = QApplication.primaryScreen().availableGeometry()
+        if screen.width() < 1024:
+            sidebar.setMaximumWidth(120)
+        else:
+            sidebar.setMaximumWidth(200)
+        
+        sidebar.setMinimumWidth(80)
 
         layout = QVBoxLayout(sidebar)
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(4)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self.datasets_btn = QPushButton("Datasets")

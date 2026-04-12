@@ -9,7 +9,10 @@ from PySide6.QtWidgets import (
     QLabel,
     QFileDialog,
     QInputDialog,
-    QMessageBox
+    QMessageBox,
+    QScrollArea,
+    QApplication,
+    QMenu
 )
 
 from PySide6.QtCore import Qt
@@ -68,48 +71,74 @@ class DatasetsPage(QWidget):
         version_widget = self._create_version_section()
         splitter.addWidget(version_widget)
 
-        splitter.setSizes([250, 900, 300])
+        splitter.setSizes([1, 3, 1])  # Proportional: 1:3:1 ratio for responsive scaling
+        splitter.setCollapsible(0, True)  # Allow sidebar collapse on small screens
+        splitter.setCollapsible(2, True)  # Allow version tree collapse on small screens
 
         root_layout.addWidget(splitter)
 
     def _create_top_bar(self):
-
         layout = QHBoxLayout()
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(4)
 
         self.dataset_label = QLabel("Dataset: None")
         self.version_label = QLabel("Version: None")
+        self.dataset_label.setMaximumWidth(300)
+        self.version_label.setMaximumWidth(300)
 
         layout.addWidget(self.dataset_label)
         layout.addWidget(self.version_label)
-
         layout.addStretch()
 
-        self.operations_btn = QPushButton("Preprocessing")
+        # Create responsive button layout: compact button names + maximum widths
+        self.operations_btn = QPushButton("Preprocess")
         self.synthesize_btn = QPushButton("Synthesize")
         self.export_btn = QPushButton("Export")
+        self.compare_plots_btn = QPushButton("Compare")
         self.train_model_btn = QPushButton("Train Model")
-        self.compare_plots_btn = QPushButton("Compare Plots")
+        
+        # Set maximum widths to keep buttons compact
+        self.operations_btn.setMaximumWidth(90)
+        self.synthesize_btn.setMaximumWidth(90)
+        self.export_btn.setMaximumWidth(70)
+        self.compare_plots_btn.setMaximumWidth(70)
+        self.train_model_btn.setMaximumWidth(90)
 
         layout.addWidget(self.operations_btn)
         layout.addWidget(self.synthesize_btn)
         layout.addWidget(self.export_btn)
-        layout.addWidget(self.train_model_btn)
         layout.addWidget(self.compare_plots_btn)
+        layout.addWidget(self.train_model_btn)
 
         return layout
 
     def _create_center_panel(self):
-
         center = QWidget()
         layout = QVBoxLayout(center)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(4)
 
         self.data_table = DataTableWidget()
         self.column_stats = ColumnStatsWidget()
         self.distribution_plot = DistributionPlotWidget()
 
-        layout.addWidget(self.data_table)
-        layout.addWidget(self.column_stats)
-        layout.addWidget(self.distribution_plot)
+        # Create scroll area for proper overflow handling on small screens
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setStyleSheet("QScrollArea { background-color: #262738; border: none; }")
+        
+        scroll_content = QWidget()
+        scroll_layout = QVBoxLayout(scroll_content)
+        scroll_layout.setContentsMargins(0, 0, 0, 0)
+        scroll_layout.setSpacing(4)
+        
+        scroll_layout.addWidget(self.data_table)
+        scroll_layout.addWidget(self.column_stats)
+        scroll_layout.addWidget(self.distribution_plot)
+        
+        scroll.setWidget(scroll_content)
+        layout.addWidget(scroll)
 
         return center
 

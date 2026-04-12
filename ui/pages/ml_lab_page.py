@@ -75,15 +75,29 @@ class MLLabPage(QWidget):
     # UI
     # ---------------------------------------------------------
     def _build_ui(self):
-        layout = QVBoxLayout(self)
+        root_layout = QVBoxLayout(self)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Create scroll area for responsive layout on small screens
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setStyleSheet("QScrollArea { background-color: #262738; border: none; }")
+        
+        # Create content widget to hold all sections
+        content = QWidget()
+        layout = QVBoxLayout(content)
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(6)
 
         layout.addWidget(self._create_dataset_section())
         layout.addWidget(self._create_model_section())
         layout.addWidget(self._create_hyperparameter_section())
         layout.addWidget(self._create_training_section())
         layout.addWidget(self._create_metrics_section())
-
         layout.addStretch()
+        
+        scroll.setWidget(content)
+        root_layout.addWidget(scroll)
 
     # ---------------------------------------------------------
     # Dataset Selection

@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QHeaderView,
+    QApplication,
 )
 from PySide6.QtCore import Qt
 
@@ -81,7 +82,18 @@ class OperationsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Operations Builder")
-        self.resize(900, 600)
+        
+        # Set responsive dialog size based on screen
+        screen = QApplication.primaryScreen().availableGeometry()
+        width = max(900, int(screen.width() * 0.75))
+        height = max(600, int(screen.height() * 0.75))
+        self.resize(width, height)
+        self.setMinimumSize(700, 500)
+        
+        # Center dialog on screen
+        geometry = self.frameGeometry()
+        geometry.moveCenter(screen.center())
+        self.move(geometry.topLeft())
 
         self.operations_sequence: List[Dict] = []
         self.result_df: Optional[pd.DataFrame] = None

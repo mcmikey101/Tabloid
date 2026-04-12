@@ -1,4 +1,7 @@
-from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QComboBox, QPushButton, QMessageBox
+from PySide6.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QComboBox, QPushButton, 
+    QMessageBox, QApplication, QScrollArea, QWidget
+)
 from PySide6.QtCore import Qt
 import pandas as pd
 import time
@@ -14,7 +17,19 @@ class SynthesisDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Data Synthesis")
         self.setModal(True)
-        self.setGeometry(100, 100, 400, 250)
+        
+        # Set responsive dialog size based on screen
+        screen = QApplication.primaryScreen().availableGeometry()
+        width = max(500, int(screen.width() * 0.4))
+        height = max(350, int(screen.height() * 0.4))
+        self.resize(width, height)
+        self.setMinimumSize(400, 300)
+        
+        # Center dialog on screen
+        geometry = self.frameGeometry()
+        geometry.moveCenter(screen.center())
+        self.move(geometry.topLeft())
+        
         self.current_df = None
         self.result_df = None
         self.result_config = None
