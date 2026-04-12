@@ -9,6 +9,8 @@ import multiprocessing as mp
 import queue
 import traceback
 import time
+import atexit
+import gc
 
 
 class WorkerProcessException(Exception):
@@ -59,6 +61,27 @@ def _worker_process_runner(func: Callable, args: Tuple, kwargs: dict, output_que
         else:
             error_msg = f"{type(e).__name__}: {str(e)}\n\n{traceback.format_exc()}"
             output_queue.put(("error", error_msg))
+    
+    finally:
+        # Ensure proper cleanup of joblib resources
+        # This allows loky backend to clean up memory-mapped files
+        try:
+            # Clean up any joblib/loky pools
+            try:
+                from joblib.externals.loky import get_reaper
+                reaper = get_reaper()
+                if reaper:
+                    reaper.shutdown(wait=False)
+            except Exception:
+                pass
+            
+            # Force garbage collection to close file handles
+            gc.collect()
+            
+            # Give joblib one last chance to clean up
+            time.sleep(0.1)
+        except Exception:
+            pass
 
 
 class WorkerThread(QThread):
@@ -119,9 +142,10 @@ class WorkerThread(QThread):
             # Terminate the process if it's running
             if self._process and self._process.is_alive():
                 try:
+                    # Give joblib/loky time to clean up gracefully
                     self._process.terminate()
-                    # Wait a bit for graceful termination
-                    self._process.join(timeout=2)
+                    # Wait longer for graceful termination (allows joblib cleanup)
+                    self._process.join(timeout=3)
                     if self._process.is_alive():
                         self._process.kill()
                         self._process.join(timeout=1)
@@ -201,10 +225,14 @@ class WorkerThread(QThread):
             except Exception:
                 pass
             
+            # Gracefully clean up process - give it time to finish cleanup
             try:
                 if self._process and self._process.is_alive():
+                    # First try graceful termination
                     self._process.terminate()
-                    self._process.join(timeout=1)
+                    # Give process time to clean up resources (especially joblib)
+                    self._process.join(timeout=2)
+                    # If still alive, force kill
                     if self._process.is_alive():
                         self._process.kill()
                         self._process.join(timeout=1)

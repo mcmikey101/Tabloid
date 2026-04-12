@@ -29,6 +29,8 @@ class ComparisonPlotsDialog(QDialog):
         self.df2 = None
         self.selected_scatter_cols_v1 = None
         self.selected_scatter_cols_v2 = None
+        self.color_col_v1 = None
+        self.color_col_v2 = None
         self.current_figure = None
         self.current_canvas = None
         
@@ -105,51 +107,65 @@ class ComparisonPlotsDialog(QDialog):
         scatter_layout.addStretch()
         layout.addLayout(scatter_layout)
         
-        # Scatter column selection widgets
+        # Scatter column selection widgets - single line layout
         scatter_cols_layout = QHBoxLayout()
         
-        scatter1_label = QLabel("Select 2-3 columns for Version 1:")
+        # Version 1 scatter
+        scatter1_label = QLabel("V1 Columns:")
         scatter1_label.setStyleSheet("color: #e0e0e0;")
         self.scatter1_select_btn = QPushButton("Select...")
         self.scatter1_select_btn.setStyleSheet("background-color: #5b7cfa; color: white; border: none; padding: 4px 8px; border-radius: 3px;")
         self.scatter1_select_btn.clicked.connect(self._show_scatter1_column_selection)
-        self.scatter1_cols_label = QLabel("None selected")
+        self.scatter1_cols_label = QLabel("None")
         self.scatter1_cols_label.setStyleSheet("color: #999999; font-size: 10px;")
         
         scatter_cols_layout.addWidget(scatter1_label)
         scatter_cols_layout.addWidget(self.scatter1_select_btn)
         scatter_cols_layout.addWidget(self.scatter1_cols_label)
-        scatter_cols_layout.addStretch()
+        scatter_cols_layout.addSpacing(10)
         
-        scatter2_label = QLabel("Select 2-3 columns for Version 2:")
+        # Color by for Version 1
+        color1_label = QLabel("Color V1:")
+        color1_label.setStyleSheet("color: #e0e0e0;")
+        self.color_combo_v1 = QComboBox()
+        self.color_combo_v1.addItem("None")
+        self.color_combo_v1.currentTextChanged.connect(self._on_color_v1_changed)
+        self.color_combo_v1.setMaximumWidth(120)
+        
+        scatter_cols_layout.addWidget(color1_label)
+        scatter_cols_layout.addWidget(self.color_combo_v1)
+        scatter_cols_layout.addSpacing(20)
+        
+        # Version 2 scatter
+        scatter2_label = QLabel("V2 Columns:")
         scatter2_label.setStyleSheet("color: #e0e0e0;")
         self.scatter2_select_btn = QPushButton("Select...")
         self.scatter2_select_btn.setStyleSheet("background-color: #5b7cfa; color: white; border: none; padding: 4px 8px; border-radius: 3px;")
         self.scatter2_select_btn.clicked.connect(self._show_scatter2_column_selection)
-        self.scatter2_cols_label = QLabel("None selected")
+        self.scatter2_cols_label = QLabel("None")
         self.scatter2_cols_label.setStyleSheet("color: #999999; font-size: 10px;")
         
         scatter_cols_layout.addWidget(scatter2_label)
         scatter_cols_layout.addWidget(self.scatter2_select_btn)
         scatter_cols_layout.addWidget(self.scatter2_cols_label)
+        scatter_cols_layout.addSpacing(10)
+        
+        # Color by for Version 2
+        color2_label = QLabel("Color V2:")
+        color2_label.setStyleSheet("color: #e0e0e0;")
+        self.color_combo_v2 = QComboBox()
+        self.color_combo_v2.addItem("None")
+        self.color_combo_v2.currentTextChanged.connect(self._on_color_v2_changed)
+        self.color_combo_v2.setMaximumWidth(120)
+        
+        scatter_cols_layout.addWidget(color2_label)
+        scatter_cols_layout.addWidget(self.color_combo_v2)
+        scatter_cols_layout.addStretch()
         
         self.scatter_cols_widget = QWidget()
         self.scatter_cols_widget.setLayout(scatter_cols_layout)
         self.scatter_cols_widget.setVisible(False)
         layout.addWidget(self.scatter_cols_widget)
-        
-        # Color by selection (for scatter plots)
-        color_layout = QHBoxLayout()
-        color_label = QLabel("Color by:")
-        color_label.setStyleSheet("color: #e0e0e0;")
-        self.color_combo = QComboBox()
-        color_layout.addWidget(color_label)
-        color_layout.addWidget(self.color_combo)
-        color_layout.addStretch()
-        self.color_layout_widget = QWidget()
-        self.color_layout_widget.setLayout(color_layout)
-        self.color_layout_widget.setVisible(False)
-        layout.addWidget(self.color_layout_widget)
         
         # Plot canvas
         self.figure = Figure(figsize=(10, 5), dpi=100, facecolor='#262738', edgecolor='#3a3d4a')
@@ -220,7 +236,6 @@ class ComparisonPlotsDialog(QDialog):
         self.col1_combo.currentTextChanged.connect(self._refresh_plot)
         self.col2_combo.currentTextChanged.connect(self._refresh_plot)
         self.plot_type_combo.currentTextChanged.connect(self._refresh_plot)
-        self.color_combo.currentTextChanged.connect(self._refresh_plot)
     
     def _load_versions(self):
         """Load versions into version combo boxes."""
@@ -307,25 +322,78 @@ class ComparisonPlotsDialog(QDialog):
         self.col2_combo.blockSignals(False)
     
     def _update_color_options(self):
-        """Update color selection options from both versions."""
-        self.color_combo.blockSignals(True)
-        current_text = self.color_combo.currentText()
-        self.color_combo.clear()
+        """Update color selection options for both versions separately."""
+        # Update Version 1 color options
+        self.color_combo_v1.blockSignals(True)
+        current_text_v1 = self.color_combo_v1.currentText()
+        self.color_combo_v1.clear()
+        self.color_combo_v1.addItem("None")
         
-        # Combine columns from both dataframes
-        all_cols = set()
         if self.df1 is not None:
-            all_cols.update(self.df1.columns.tolist())
+            categorical_cols = []
+            numeric_cols = []
+            
+            for col in sorted(self.df1.columns.tolist()):
+                dtype = self.df1[col].dtype
+                if pd.api.types.is_object_dtype(dtype) or pd.api.types.is_categorical_dtype(dtype):
+                    categorical_cols.append(col)
+                elif pd.api.types.is_numeric_dtype(dtype):
+                    numeric_cols.append(col)
+            
+            for col in categorical_cols:
+                self.color_combo_v1.addItem(col)
+            for col in numeric_cols:
+                self.color_combo_v1.addItem(col)
+            
+            # Try to restore previous selection
+            if current_text_v1 and current_text_v1 != "None" and self.color_combo_v1.findText(current_text_v1) >= 0:
+                self.color_combo_v1.setCurrentText(current_text_v1)
+        
+        self.color_combo_v1.blockSignals(False)
+        
+        # Update Version 2 color options
+        self.color_combo_v2.blockSignals(True)
+        current_text_v2 = self.color_combo_v2.currentText()
+        self.color_combo_v2.clear()
+        self.color_combo_v2.addItem("None")
+        
         if self.df2 is not None:
-            all_cols.update(self.df2.columns.tolist())
+            categorical_cols = []
+            numeric_cols = []
+            
+            for col in sorted(self.df2.columns.tolist()):
+                dtype = self.df2[col].dtype
+                if pd.api.types.is_object_dtype(dtype) or pd.api.types.is_categorical_dtype(dtype):
+                    categorical_cols.append(col)
+                elif pd.api.types.is_numeric_dtype(dtype):
+                    numeric_cols.append(col)
+            
+            for col in categorical_cols:
+                self.color_combo_v2.addItem(col)
+            for col in numeric_cols:
+                self.color_combo_v2.addItem(col)
+            
+            # Try to restore previous selection
+            if current_text_v2 and current_text_v2 != "None" and self.color_combo_v2.findText(current_text_v2) >= 0:
+                self.color_combo_v2.setCurrentText(current_text_v2)
         
-        self.color_combo.addItems(sorted(list(all_cols)))
-        
-        # Try to restore previous selection
-        if current_text and self.color_combo.findText(current_text) >= 0:
-            self.color_combo.setCurrentText(current_text)
-        
-        self.color_combo.blockSignals(False)
+        self.color_combo_v2.blockSignals(False)
+    
+    def _on_color_v1_changed(self):
+        """Handle color column change for Version 1."""
+        self.color_col_v1 = self.color_combo_v1.currentText()
+        if self.color_col_v1 == "None":
+            self.color_col_v1 = None
+        if self.scatter_checkbox.isChecked():
+            self._refresh_plot()
+    
+    def _on_color_v2_changed(self):
+        """Handle color column change for Version 2."""
+        self.color_col_v2 = self.color_combo_v2.currentText()
+        if self.color_col_v2 == "None":
+            self.color_col_v2 = None
+        if self.scatter_checkbox.isChecked():
+            self._refresh_plot()
     
     def _on_scatter_option_changed(self):
         """Handle scatter plot checkbox change."""
@@ -409,76 +477,115 @@ class ComparisonPlotsDialog(QDialog):
         ax2.set_title(f"{col2}\n({version2})", color='#e0e0e0', fontsize=12, fontweight='bold')
     
     def _plot_scatter_comparison(self):
-        """Create two side-by-side scatter plots for comparison."""
+        """Create two side-by-side scatter plots for comparison with optional coloring by class."""
         if not self.selected_scatter_cols_v1 or not self.selected_scatter_cols_v2:
-            QMessageBox.warning(self, "Warning", "Please select columns for both versions.")
             return
         
         ax1, ax2 = self.figure.subplots(1, 2)
         
         # Version 1 scatter plot
-        ax1.set_facecolor('#262738')
-        for spine in ax1.spines.values():
-            spine.set_color('#3a3d4a')
-        ax1.tick_params(colors='#e0e0e0')
-        ax1.xaxis.label.set_color('#e0e0e0')
-        ax1.yaxis.label.set_color('#e0e0e0')
-        
-        version1 = self.version1_combo.currentText()
-        cols_v1 = [c for c in self.selected_scatter_cols_v1 if c in self.df1.columns]
-        
-        if len(cols_v1) >= 2:
-            data_v1 = self.df1[cols_v1].dropna()
-            
-            if len(cols_v1) == 2:
-                scatter1 = ax1.scatter(data_v1[cols_v1[0]], data_v1[cols_v1[1]], 
-                                      alpha=0.6, s=50, color='#5b7cfa', edgecolors='#3a3d4a')
-                ax1.set_xlabel(cols_v1[0], color='#e0e0e0')
-                ax1.set_ylabel(cols_v1[1], color='#e0e0e0')
-            elif len(cols_v1) == 3:
-                # 3D-like plot using color for third dimension
-                scatter1 = ax1.scatter(data_v1[cols_v1[0]], data_v1[cols_v1[1]], 
-                                      c=data_v1[cols_v1[2]], cmap='viridis', 
-                                      alpha=0.6, s=50, edgecolors='#3a3d4a')
-                ax1.set_xlabel(cols_v1[0], color='#e0e0e0')
-                ax1.set_ylabel(cols_v1[1], color='#e0e0e0')
-                cbar1 = self.figure.colorbar(scatter1, ax=ax1)
-                cbar1.set_label(cols_v1[2], color='#e0e0e0')
-                cbar1.ax.tick_params(colors='#e0e0e0')
-        
-        ax1.set_title(f"Version: {version1}", color='#e0e0e0', fontsize=12, fontweight='bold')
+        self._create_scatter_subplot(
+            ax=ax1,
+            df=self.df1,
+            cols=self.selected_scatter_cols_v1,
+            version_name=self.version1_combo.currentText(),
+            color_col=self.color_col_v1,
+            default_color='#5b7cfa'
+        )
         
         # Version 2 scatter plot
-        ax2.set_facecolor('#262738')
-        for spine in ax2.spines.values():
+        self._create_scatter_subplot(
+            ax=ax2,
+            df=self.df2,
+            cols=self.selected_scatter_cols_v2,
+            version_name=self.version2_combo.currentText(),
+            color_col=self.color_col_v2,
+            default_color='#ff6b6b'
+        )
+    
+    def _create_scatter_subplot(self, ax, df, cols, version_name, color_col=None, default_color='#5b7cfa'):
+        """Create a single scatter subplot with optional color by column."""
+        ax.set_facecolor('#262738')
+        for spine in ax.spines.values():
             spine.set_color('#3a3d4a')
-        ax2.tick_params(colors='#e0e0e0')
-        ax2.xaxis.label.set_color('#e0e0e0')
-        ax2.yaxis.label.set_color('#e0e0e0')
+        ax.tick_params(colors='#e0e0e0')
+        ax.xaxis.label.set_color('#e0e0e0')
+        ax.yaxis.label.set_color('#e0e0e0')
         
-        version2 = self.version2_combo.currentText()
-        cols_v2 = [c for c in self.selected_scatter_cols_v2 if c in self.df2.columns]
+        cols_available = [c for c in cols if c in df.columns]
         
-        if len(cols_v2) >= 2:
-            data_v2 = self.df2[cols_v2].dropna()
+        if len(cols_available) < 2:
+            ax.text(0.5, 0.5, 'Insufficient columns selected', 
+                   ha='center', va='center', color='#999999', transform=ax.transAxes)
+            ax.set_title(f"Version: {version_name}", color='#e0e0e0', fontsize=12, fontweight='bold')
+            return
+        
+        # Prepare data - use only first 2 columns for scatter plot coordinates
+        x_col, y_col = cols_available[0], cols_available[1]
+        plot_data = df[[x_col, y_col]].dropna()
+        
+        # Handle the third column (if selected) or color_col
+        if color_col and color_col in df.columns and color_col != y_col and color_col != x_col:
+            # Filter to rows that have both scatter and color data
+            color_data_all = df[color_col]
+            plot_data = plot_data[color_data_all.index.isin(plot_data.index)]
+            color_data = color_data_all.loc[plot_data.index]
             
-            if len(cols_v2) == 2:
-                scatter2 = ax2.scatter(data_v2[cols_v2[0]], data_v2[cols_v2[1]], 
-                                      alpha=0.6, s=50, color='#ff6b6b', edgecolors='#3a3d4a')
-                ax2.set_xlabel(cols_v2[0], color='#e0e0e0')
-                ax2.set_ylabel(cols_v2[1], color='#e0e0e0')
-            elif len(cols_v2) == 3:
-                # 3D-like plot using color for third dimension
-                scatter2 = ax2.scatter(data_v2[cols_v2[0]], data_v2[cols_v2[1]], 
-                                      c=data_v2[cols_v2[2]], cmap='plasma', 
-                                      alpha=0.6, s=50, edgecolors='#3a3d4a')
-                ax2.set_xlabel(cols_v2[0], color='#e0e0e0')
-                ax2.set_ylabel(cols_v2[1], color='#e0e0e0')
-                cbar2 = self.figure.colorbar(scatter2, ax=ax2)
-                cbar2.set_label(cols_v2[2], color='#e0e0e0')
-                cbar2.ax.tick_params(colors='#e0e0e0')
+            scatter = self._scatter_with_coloring(
+                ax, plot_data[x_col], plot_data[y_col], color_data
+            )
+            cbar = self.figure.colorbar(scatter, ax=ax)
+            cbar.set_label(color_col, color='#e0e0e0')
+            cbar.ax.tick_params(colors='#e0e0e0')
+        elif len(cols_available) >= 3:
+            # Use third selected column for coloring (if available)
+            z_col = cols_available[2]
+            color_data = df.loc[plot_data.index, z_col]
+            
+            scatter = self._scatter_with_coloring(
+                ax, plot_data[x_col], plot_data[y_col], color_data
+            )
+            cbar = self.figure.colorbar(scatter, ax=ax)
+            cbar.set_label(z_col, color='#e0e0e0')
+            cbar.ax.tick_params(colors='#e0e0e0')
+        else:
+            # No coloring, use default color
+            ax.scatter(plot_data[x_col], plot_data[y_col], 
+                      alpha=0.6, s=50, color=default_color, edgecolors='#3a3d4a')
         
-        ax2.set_title(f"Version: {version2}", color='#e0e0e0', fontsize=12, fontweight='bold')
+        ax.set_xlabel(x_col, color='#e0e0e0')
+        ax.set_ylabel(y_col, color='#e0e0e0')
+        ax.set_title(f"Version: {version_name}", color='#e0e0e0', fontsize=12, fontweight='bold')
+    
+    def _scatter_with_coloring(self, ax, x, y, c):
+        """Create scatter plot with intelligent coloring based on data type."""
+        import numpy as np
+        
+        # Check if color data is numeric or categorical
+        if pd.api.types.is_numeric_dtype(c):
+            # Numeric: use colormap
+            scatter = ax.scatter(x, y, c=c, cmap='viridis', 
+                               alpha=0.6, s=50, edgecolors='#3a3d4a')
+        else:
+            # Categorical: use discrete colors
+            unique_classes = c.unique()
+            colors = plt.cm.get_cmap('tab10')(np.linspace(0, 1, len(unique_classes)))
+            
+            scatter_list = []
+            for idx, cls in enumerate(unique_classes):
+                mask = c == cls
+                scatter_list.append(ax.scatter(x[mask], y[mask], 
+                                              color=colors[idx], label=str(cls),
+                                              alpha=0.6, s=50, edgecolors='#3a3d4a'))
+            
+            ax.legend(loc='upper right', framealpha=0.9, 
+                     facecolor='#262738', edgecolor='#3a3d4a',
+                     labelcolor='#e0e0e0')
+            
+            # Return first scatter object for consistency, though legend is the main info
+            scatter = scatter_list[0] if scatter_list else None
+        
+        return scatter
     
     def _show_scatter1_column_selection(self):
         """Show column selection dialog for version 1 scatter plot."""
