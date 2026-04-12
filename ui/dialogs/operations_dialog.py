@@ -143,14 +143,10 @@ class OperationsDialog(QDialog):
         add_btn = QPushButton("Add Operation")
         add_btn.clicked.connect(self._add_operation)
 
-        remove_btn = QPushButton("Remove Selected")
-        remove_btn.clicked.connect(self._remove_operation)
-
         clear_btn = QPushButton("Clear All")
         clear_btn.clicked.connect(self._clear_operations)
 
         button_layout.addWidget(add_btn)
-        button_layout.addWidget(remove_btn)
         button_layout.addWidget(clear_btn)
         button_layout.addStretch()
 
