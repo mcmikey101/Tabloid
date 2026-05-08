@@ -25,7 +25,7 @@ class ExperimentManager:
     - optional serialized model artifact
     """
 
-    def __init__(self, base_path: str | Path = "experiments"):
+    def __init__(self, base_path: str | Path = "experiments/temp_exp"):
         self.base_path = Path(base_path)
         self.base_path.mkdir(parents=True, exist_ok=True)
 

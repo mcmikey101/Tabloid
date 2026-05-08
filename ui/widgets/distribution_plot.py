@@ -62,41 +62,84 @@ class DistributionPlotWidget(QWidget):
         header_layout.addStretch()
         plot_layout.addLayout(header_layout)
         
+        # Controls: Column selector + Plot type + Export
+        controls_layout = QHBoxLayout()
+        
+        # Column selector (NEW)
+        column_label_text = QLabel("Column:")
+        column_label_text.setStyleSheet("color: #e0e0e0;")
+        self.column_select_combo = QComboBox()
+        self.column_select_combo.setStyleSheet("""
+            QComboBox {
+                background-color: #2b2d42;
+                color: #e0e0e0;
+                border: 1px solid #3a3d4a;
+                border-radius: 3px;
+                padding: 4px 8px;
+            }
+            QComboBox::drop-down {
+                border: none;
+            }
+            QComboBox::down-arrow {
+                width: 12px;
+                height: 8px;
+            }
+        """)
+        self.column_select_combo.currentTextChanged.connect(self._on_column_selected)
+        controls_layout.addWidget(column_label_text)
+        controls_layout.addWidget(self.column_select_combo)
+        controls_layout.addSpacing(12)
+        
         # Plot type selector
-        plot_type_layout = QHBoxLayout()
         plot_label = QLabel("Plot Type:")
         plot_label.setStyleSheet("color: #e0e0e0;")
         self.plot_type_combo = QComboBox()
+        self.plot_type_combo.setStyleSheet("""
+            QComboBox {
+                background-color: #2b2d42;
+                color: #e0e0e0;
+                border: 1px solid #3a3d4a;
+                border-radius: 3px;
+                padding: 4px 8px;
+            }
+            QComboBox::drop-down {
+                border: none;
+            }
+        """)
         self.plot_type_combo.addItems(["Histogram", "Box Plot", "Violin Plot", "Count Plot"])
         self.plot_type_combo.currentTextChanged.connect(self._on_plot_type_changed)
-        plot_type_layout.addWidget(plot_label)
-        plot_type_layout.addWidget(self.plot_type_combo)
+        controls_layout.addWidget(plot_label)
+        controls_layout.addWidget(self.plot_type_combo)
+        controls_layout.addStretch()
         
-        # Export button for distribution plot
-        self.export_plot_btn = QPushButton("Export Plot")
+        # Export button for distribution plot (RESTYLE: ghost button)
+        self.export_plot_btn = QPushButton("📊")
+        self.export_plot_btn.setMaximumWidth(36)
+        self.export_plot_btn.setMaximumHeight(32)
+        self.export_plot_btn.setToolTip("Export Plot")
         self.export_plot_btn.setStyleSheet("""
             QPushButton {
-                background-color: #5b7cfa;
-                color: white;
-                border: none;
-                padding: 4px 12px;
+                background-color: transparent;
+                color: #e0e0e0;
+                border: 1px solid #3a3d4a;
                 border-radius: 3px;
-                font-weight: bold;
+                padding: 4px;
+                font-size: 16px;
             }
             QPushButton:hover {
-                background-color: #4c63d2;
+                background-color: #3a3d4a;
+                border: 1px solid #5b7cfa;
             }
         """)
         self.export_plot_btn.clicked.connect(lambda: self._export_figure(self.figure, "Distribution Plot"))
-        plot_type_layout.addWidget(self.export_plot_btn)
+        controls_layout.addWidget(self.export_plot_btn)
         
-        plot_type_layout.addStretch()
-        plot_layout.addLayout(plot_type_layout)
+        plot_layout.addLayout(controls_layout)
         
-        # Column info label
-        self.column_label = QLabel("Select a column from the table to visualize")
-        self.column_label.setStyleSheet("color: #999999; font-size: 10px;")
-        plot_layout.addWidget(self.column_label)
+        # Column info label (simplified, shows current selection details)
+        self.column_info_label = QLabel("Select a column to visualize")
+        self.column_info_label.setStyleSheet("color: #999999; font-size: 10px;")
+        plot_layout.addWidget(self.column_info_label)
 
         # Figure for plotting - responsive sizing
         # Use smaller figsize; will adapt better to container
@@ -128,19 +171,23 @@ class DistributionPlotWidget(QWidget):
         self.scatter_color_combo = QComboBox()
         self.scatter_color_combo.currentTextChanged.connect(self._on_scatter_plot_changed)
         
-        # Export button for scatter plot
-        self.export_scatter_btn = QPushButton("Export Plot")
+        # Export button for scatter plot (RESTYLE: ghost button)
+        self.export_scatter_btn = QPushButton("📊")
+        self.export_scatter_btn.setMaximumWidth(36)
+        self.export_scatter_btn.setMaximumHeight(32)
+        self.export_scatter_btn.setToolTip("Export Plot")
         self.export_scatter_btn.setStyleSheet("""
             QPushButton {
-                background-color: #5b7cfa;
-                color: white;
-                border: none;
-                padding: 4px 12px;
+                background-color: transparent;
+                color: #e0e0e0;
+                border: 1px solid #3a3d4a;
                 border-radius: 3px;
-                font-weight: bold;
+                padding: 4px;
+                font-size: 16px;
             }
             QPushButton:hover {
-                background-color: #4c63d2;
+                background-color: #3a3d4a;
+                border: 1px solid #5b7cfa;
             }
         """)
         self.export_scatter_btn.clicked.connect(lambda: self._export_figure(self.scatter_figure, "Scatter Plot"))
@@ -197,10 +244,18 @@ class DistributionPlotWidget(QWidget):
         self.current_dataset = dataset_name
         self.current_version = version_name
         
-        # Update color column options for scatter plot - include ALL columns
+        # Update column options for Distribution plot
         if df is not None:
             all_cols = df.columns.tolist()
-            self.scatter_color_combo.blockSignals(True)  # Prevent triggering plot on update
+            
+            # Update distribution column selector
+            self.column_select_combo.blockSignals(True)
+            self.column_select_combo.clear()
+            self.column_select_combo.addItems(all_cols)
+            self.column_select_combo.blockSignals(False)
+            
+            # Update color column options for scatter plot
+            self.scatter_color_combo.blockSignals(True)
             self.scatter_color_combo.clear()
             self.scatter_color_combo.addItems(all_cols)
             self.scatter_color_combo.blockSignals(False)
@@ -278,20 +333,36 @@ class DistributionPlotWidget(QWidget):
                 lines.append(f"{indent_str}... and {len(obj) - 10} more items")
 
     def plot_column(self, column_name: str):
-        """Plot the selected column."""
+        """Plot the selected column. Also updates the dropdown selector."""
         if self.df is None or column_name not in self.df.columns:
             return
         
-        self.column_label.setText(f"Column: {column_name} | Type: {self.df[column_name].dtype}")
+        # Update the dropdown to match the selected column
+        self.column_select_combo.blockSignals(True)
+        self.column_select_combo.setCurrentText(column_name)
+        self.column_select_combo.blockSignals(False)
+        
+        self._plot_selected_column_internal(column_name)
+    
+    def _on_column_selected(self, column_name: str):
+        """Handle explicit column selection from dropdown."""
+        if not column_name or self.df is None or column_name not in self.df.columns:
+            return
+        self._plot_selected_column_internal(column_name)
+    
+    def _plot_selected_column_internal(self, column_name: str):
+        """Internal method to plot selected column and update info label."""
+        if self.df is None or column_name not in self.df.columns:
+            return
+        
+        self.column_info_label.setText(f"Column: {column_name} | Type: {self.df[column_name].dtype}")
         self._plot_selected_column(column_name)
 
     def _on_plot_type_changed(self):
         """Redraw plot when type changes."""
-        column_text = self.column_label.text()
-        if "Column:" in column_text:
-            column_name = column_text.split("|")[0].replace("Column:", "").strip()
-            if column_name in self.df.columns:
-                self._plot_selected_column(column_name)
+        column_name = self.column_select_combo.currentText()
+        if column_name and self.df is not None and column_name in self.df.columns:
+            self._plot_selected_column(column_name)
 
     def _plot_selected_column(self, column_name: str):
         """Plot column with selected plot type."""

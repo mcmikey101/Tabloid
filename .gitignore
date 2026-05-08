@@ -81,3 +81,5 @@ data/
 test.py
 *.csv
 *.ipynb
+
+experiments/temp_exp

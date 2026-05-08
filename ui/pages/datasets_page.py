@@ -80,7 +80,7 @@ class DatasetsPage(QWidget):
     def _create_top_bar(self):
         layout = QHBoxLayout()
         layout.setContentsMargins(4, 4, 4, 4)
-        layout.setSpacing(4)
+        layout.setSpacing(8)
 
         self.dataset_label = QLabel("Dataset: None")
         self.version_label = QLabel("Version: None")
@@ -89,27 +89,111 @@ class DatasetsPage(QWidget):
 
         layout.addWidget(self.dataset_label)
         layout.addWidget(self.version_label)
+        
+        # Dataset shape indicator (rows x columns)
+        self.shape_label = QLabel("")
+        self.shape_label.setStyleSheet("""
+            color: #999999;
+            font-size: 10px;
+            padding: 0px 8px;
+        """)
+        layout.addWidget(self.shape_label)
+        
         layout.addStretch()
 
-        # Create responsive button layout: compact button names + maximum widths
+        # ===== PRIMARY ACTION BUTTONS =====
         self.operations_btn = QPushButton("Preprocess")
-        self.synthesize_btn = QPushButton("Synthesize")
-        self.export_btn = QPushButton("Export")
-        self.compare_plots_btn = QPushButton("Compare")
-        self.train_model_btn = QPushButton("Train Model")
+        self.operations_btn.setMaximumWidth(85)
+        self.operations_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #5b7cfa;
+                color: white;
+                border: none;
+                padding: 6px 12px;
+                border-radius: 3px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #4c63d2;
+            }
+        """)
         
-        # Set maximum widths to keep buttons compact
-        self.operations_btn.setMaximumWidth(90)
-        self.synthesize_btn.setMaximumWidth(90)
-        self.export_btn.setMaximumWidth(70)
-        self.compare_plots_btn.setMaximumWidth(70)
+        self.train_model_btn = QPushButton("Train Model")
         self.train_model_btn.setMaximumWidth(90)
-
+        self.train_model_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #5b7cfa;
+                color: white;
+                border: none;
+                padding: 6px 12px;
+                border-radius: 3px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #4c63d2;
+            }
+        """)
+        
         layout.addWidget(self.operations_btn)
+        layout.addWidget(self.train_model_btn)
+        
+        # Visual separator
+        separator1 = QLabel("|")
+        separator1.setStyleSheet("color: #3a3d4a; padding: 0px 4px;")
+        layout.addWidget(separator1)
+        
+        # ===== SECONDARY ACTION BUTTONS =====
+        self.synthesize_btn = QPushButton("Synthesize")
+        self.synthesize_btn.setMaximumWidth(85)
+        self.synthesize_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #3a3d4a;
+                color: #e0e0e0;
+                border: 1px solid #3a3d4a;
+                padding: 6px 12px;
+                border-radius: 3px;
+            }
+            QPushButton:hover {
+                background-color: #4a4d5a;
+                border: 1px solid #5b7cfa;
+            }
+        """)
+        
+        self.export_btn = QPushButton("Export")
+        self.export_btn.setMaximumWidth(70)
+        self.export_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #3a3d4a;
+                color: #e0e0e0;
+                border: 1px solid #3a3d4a;
+                padding: 6px 12px;
+                border-radius: 3px;
+            }
+            QPushButton:hover {
+                background-color: #4a4d5a;
+                border: 1px solid #5b7cfa;
+            }
+        """)
+        
+        self.compare_plots_btn = QPushButton("Compare")
+        self.compare_plots_btn.setMaximumWidth(70)
+        self.compare_plots_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #3a3d4a;
+                color: #e0e0e0;
+                border: 1px solid #3a3d4a;
+                padding: 6px 12px;
+                border-radius: 3px;
+            }
+            QPushButton:hover {
+                background-color: #4a4d5a;
+                border: 1px solid #5b7cfa;
+            }
+        """)
+        
         layout.addWidget(self.synthesize_btn)
         layout.addWidget(self.export_btn)
         layout.addWidget(self.compare_plots_btn)
-        layout.addWidget(self.train_model_btn)
 
         return layout
 
@@ -398,6 +482,10 @@ class DatasetsPage(QWidget):
         self.current_df = df
 
         self.version_label.setText(f"Version: {version_name}")
+        
+        # Update dataset shape display (rows x columns)
+        rows, cols = df.shape
+        self.shape_label.setText(f"Shape: {rows} rows × {cols} columns")
 
         self.data_table.load_dataframe(df)
         self.distribution_plot.load_dataframe(
@@ -418,6 +506,8 @@ class DatasetsPage(QWidget):
         metadata = derive_metadata(self.current_df)
 
         stats = metadata["columns"].get(column_name, {})
+        # Add the column name to stats so display_stats can use it
+        stats["name"] = column_name
 
         self.column_stats.display_stats(stats)
 
