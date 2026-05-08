@@ -66,36 +66,59 @@ class MainWindow(QMainWindow):
 
     def _create_sidebar(self):
         sidebar = QWidget()
-        
-        # Make sidebar responsive: fixed on larger screens, narrower on smaller
-        screen = QApplication.primaryScreen().availableGeometry()
-        if screen.width() < 1024:
-            sidebar.setMaximumWidth(120)
-        else:
-            sidebar.setMaximumWidth(200)
-        
-        sidebar.setMinimumWidth(80)
+        self.sidebar_expanded = True
+
+        self.sidebar_expanded_width = 200
+        self.sidebar_collapsed_width = 60
+
+        sidebar.setMinimumWidth(self.sidebar_collapsed_width)
+        sidebar.setMaximumWidth(self.sidebar_expanded_width)
+        sidebar.setFixedWidth(self.sidebar_expanded_width)
 
         layout = QVBoxLayout(sidebar)
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(4)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
+        # Toggle button
+        self.toggle_btn = QPushButton("☰")
+        self.toggle_btn.setFixedHeight(40)
+        self.toggle_btn.clicked.connect(self._toggle_sidebar)
+        layout.addWidget(self.toggle_btn)
+
+        # Navigation buttons
         self.datasets_btn = QPushButton("Datasets")
         self.experiments_btn = QPushButton("Experiments")
         self.ml_lab_btn = QPushButton("ML Lab")
 
-        self.datasets_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.experiments_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.ml_lab_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        for btn in [self.datasets_btn, self.experiments_btn, self.ml_lab_btn]:
+            btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+            btn.setFixedHeight(40)
+            layout.addWidget(btn)
 
         self.datasets_btn.clicked.connect(lambda: self.pages.setCurrentIndex(0))
         self.experiments_btn.clicked.connect(lambda: self.pages.setCurrentIndex(1))
         self.ml_lab_btn.clicked.connect(lambda: self.pages.setCurrentIndex(2))
 
-        layout.addWidget(self.datasets_btn)
-        layout.addWidget(self.experiments_btn)
-        layout.addWidget(self.ml_lab_btn)
         layout.addStretch()
 
         return sidebar
+
+
+    def _toggle_sidebar(self):
+        if self.sidebar_expanded:
+            self.sidebar_expanded = False
+            self.sender().parent().setFixedWidth(self.sidebar_collapsed_width)
+
+            # Collapse: hide text
+            self.datasets_btn.setText("")
+            self.experiments_btn.setText("")
+            self.ml_lab_btn.setText("")
+        else:
+            self.sidebar_expanded = True
+            self.sender().parent().setFixedWidth(self.sidebar_expanded_width)
+
+            # Expand: restore text
+            self.datasets_btn.setText("Datasets")
+            self.experiments_btn.setText("Experiments")
+            self.ml_lab_btn.setText("ML Lab")
