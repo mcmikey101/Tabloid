@@ -151,8 +151,8 @@ class ComparisonPlotsDialog(QDialog):
         layout.addWidget(self.scatter_cols_widget)
         
         # Plot canvas - add to layout with proper stretch
-        self.figure = Figure(figsize=(10, 5), dpi=80, facecolor='#262738', edgecolor='#3a3d4a')
-        self.figure.patch.set_facecolor('#262738')
+        self.figure = Figure(figsize=(10, 5), dpi=80, facecolor='white', edgecolor='#cccccc')
+        self.figure.patch.set_facecolor('white')
         self.figure.subplots_adjust(left=0.08, right=0.95, top=0.95, bottom=0.1)
         self.canvas = FigureCanvasQTAgg(self.figure)
         layout.addWidget(self.canvas, 1)  # Give plot area high stretch factor
@@ -423,19 +423,19 @@ class ComparisonPlotsDialog(QDialog):
         ax1, ax2 = self.figure.subplots(1, 2)
         
         # Left plot - from version 1
-        ax1.set_facecolor('#262738')
+        ax1.set_facecolor('white')
         for spine in ax1.spines.values():
-            spine.set_color('#3a3d4a')
-        ax1.tick_params(colors='#e0e0e0')
-        ax1.xaxis.label.set_color('#e0e0e0')
-        ax1.yaxis.label.set_color('#e0e0e0')
+            spine.set_color('#cccccc')
+        ax1.tick_params(colors='#333333')
+        ax1.xaxis.label.set_color('#333333')
+        ax1.yaxis.label.set_color('#333333')
         
         data1 = self.df1[col1].dropna() if col1 in self.df1.columns else pd.Series()
         version1 = self.version1_combo.currentText()
         
         if not data1.empty:
             if plot_type == "Histogram":
-                ax1.hist(data1, bins=30, color='#5b7cfa', edgecolor='#3a3d4a', alpha=0.7)
+                ax1.hist(data1, bins=30, color='#5b7cfa', edgecolor='white', alpha=0.7)
             elif plot_type == "Box Plot":
                 ax1.boxplot(data1, vert=True)
             elif plot_type == "Violin Plot":
@@ -443,22 +443,22 @@ class ComparisonPlotsDialog(QDialog):
             elif plot_type == "KDE Plot":
                 data1.plot(kind='kde', ax=ax1, color='#5b7cfa', linewidth=2)
         
-        ax1.set_title(f"{col1}\n({version1})", color='#e0e0e0', fontsize=12, fontweight='bold')
+        ax1.set_title(f"{col1}\n({version1})", color='#333333', fontsize=12, fontweight='bold')
         
         # Right plot - from version 2
-        ax2.set_facecolor('#262738')
+        ax2.set_facecolor('white')
         for spine in ax2.spines.values():
-            spine.set_color('#3a3d4a')
-        ax2.tick_params(colors='#e0e0e0')
-        ax2.xaxis.label.set_color('#e0e0e0')
-        ax2.yaxis.label.set_color('#e0e0e0')
+            spine.set_color('#cccccc')
+        ax2.tick_params(colors='#333333')
+        ax2.xaxis.label.set_color('#333333')
+        ax2.yaxis.label.set_color('#333333')
         
         data2 = self.df2[col2].dropna() if col2 in self.df2.columns else pd.Series()
         version2 = self.version2_combo.currentText()
         
         if not data2.empty:
             if plot_type == "Histogram":
-                ax2.hist(data2, bins=30, color='#ff6b6b', edgecolor='#3a3d4a', alpha=0.7)
+                ax2.hist(data2, bins=30, color='#ff6b6b', edgecolor='white', alpha=0.7)
             elif plot_type == "Box Plot":
                 ax2.boxplot(data2, vert=True)
             elif plot_type == "Violin Plot":
@@ -466,7 +466,7 @@ class ComparisonPlotsDialog(QDialog):
             elif plot_type == "KDE Plot":
                 data2.plot(kind='kde', ax=ax2, color='#ff6b6b', linewidth=2)
         
-        ax2.set_title(f"{col2}\n({version2})", color='#e0e0e0', fontsize=12, fontweight='bold')
+        ax2.set_title(f"{col2}\n({version2})", color='#333333', fontsize=12, fontweight='bold')
     
     def _plot_scatter_comparison(self):
         """Create two side-by-side scatter plots for comparison with optional coloring by class."""
@@ -497,28 +497,26 @@ class ComparisonPlotsDialog(QDialog):
     
     def _create_scatter_subplot(self, ax, df, cols, version_name, color_col=None, default_color='#5b7cfa'):
         """Create a single scatter subplot with optional color by column."""
-        ax.set_facecolor('#262738')
+        ax.set_facecolor('white')
         for spine in ax.spines.values():
-            spine.set_color('#3a3d4a')
-        ax.tick_params(colors='#e0e0e0')
-        ax.xaxis.label.set_color('#e0e0e0')
-        ax.yaxis.label.set_color('#e0e0e0')
+            spine.set_color('#cccccc')
+        ax.tick_params(colors='#333333')
+        ax.xaxis.label.set_color('#333333')
+        ax.yaxis.label.set_color('#333333')
         
         cols_available = [c for c in cols if c in df.columns]
         
         if len(cols_available) < 2:
-            ax.text(0.5, 0.5, 'Insufficient columns selected', 
-                   ha='center', va='center', color='#999999', transform=ax.transAxes)
-            ax.set_title(f"Version: {version_name}", color='#e0e0e0', fontsize=12, fontweight='bold')
+            ax.text(0.5, 0.5, 'Insufficient columns selected',
+                   ha='center', va='center', color='#666666', transform=ax.transAxes)
+            ax.set_title(f"Version: {version_name}", color='#333333', fontsize=12, fontweight='bold')
             return
         
-        # Prepare data - use only first 2 columns for scatter plot coordinates
         x_col, y_col = cols_available[0], cols_available[1]
         plot_data = df[[x_col, y_col]].dropna()
         
-        # Handle the third column (if selected) or color_col
-        if color_col and color_col in df.columns and color_col != y_col and color_col != x_col:
-            # Filter to rows that have both scatter and color data
+        # Color by explicit color_col only — never fall back to a third selected column
+        if color_col and color_col in df.columns and color_col != x_col and color_col != y_col:
             color_data_all = df[color_col]
             plot_data = plot_data[color_data_all.index.isin(plot_data.index)]
             color_data = color_data_all.loc[plot_data.index]
@@ -527,54 +525,39 @@ class ComparisonPlotsDialog(QDialog):
                 ax, plot_data[x_col], plot_data[y_col], color_data
             )
             cbar = self.figure.colorbar(scatter, ax=ax)
-            cbar.set_label(color_col, color='#e0e0e0')
-            cbar.ax.tick_params(colors='#e0e0e0')
-        elif len(cols_available) >= 3:
-            # Use third selected column for coloring (if available)
-            z_col = cols_available[2]
-            color_data = df.loc[plot_data.index, z_col]
-            
-            scatter = self._scatter_with_coloring(
-                ax, plot_data[x_col], plot_data[y_col], color_data
-            )
-            cbar = self.figure.colorbar(scatter, ax=ax)
-            cbar.set_label(z_col, color='#e0e0e0')
-            cbar.ax.tick_params(colors='#e0e0e0')
+            cbar.set_label(color_col, color='#333333')
+            cbar.ax.tick_params(colors='#333333')
         else:
-            # No coloring, use default color
-            ax.scatter(plot_data[x_col], plot_data[y_col], 
-                      alpha=0.6, s=50, color=default_color, edgecolors='#3a3d4a')
+            # No color column selected — plain scatter with default color
+            ax.scatter(plot_data[x_col], plot_data[y_col],
+                      alpha=0.6, s=50, color=default_color, edgecolors='white')
         
-        ax.set_xlabel(x_col, color='#e0e0e0')
-        ax.set_ylabel(y_col, color='#e0e0e0')
-        ax.set_title(f"Version: {version_name}", color='#e0e0e0', fontsize=12, fontweight='bold')
+        ax.set_xlabel(x_col, color='#333333')
+        ax.set_ylabel(y_col, color='#333333')
+        ax.set_title(f"Version: {version_name}", color='#333333', fontsize=12, fontweight='bold')
     
     def _scatter_with_coloring(self, ax, x, y, c):
         """Create scatter plot with intelligent coloring based on data type."""
         import numpy as np
         
-        # Check if color data is numeric or categorical
         if pd.api.types.is_numeric_dtype(c):
-            # Numeric: use colormap
-            scatter = ax.scatter(x, y, c=c, cmap='viridis', 
-                               alpha=0.6, s=50, edgecolors='#3a3d4a')
+            scatter = ax.scatter(x, y, c=c, cmap='viridis',
+                               alpha=0.6, s=50, edgecolors='white')
         else:
-            # Categorical: use discrete colors
             unique_classes = c.unique()
             colors = plt.cm.get_cmap('tab10')(np.linspace(0, 1, len(unique_classes)))
             
             scatter_list = []
             for idx, cls in enumerate(unique_classes):
                 mask = c == cls
-                scatter_list.append(ax.scatter(x[mask], y[mask], 
+                scatter_list.append(ax.scatter(x[mask], y[mask],
                                               color=colors[idx], label=str(cls),
-                                              alpha=0.6, s=50, edgecolors='#3a3d4a'))
+                                              alpha=0.6, s=50, edgecolors='white'))
             
-            ax.legend(loc='upper right', framealpha=0.9, 
-                     facecolor='#262738', edgecolor='#3a3d4a',
-                     labelcolor='#e0e0e0')
+            ax.legend(loc='upper right', framealpha=0.9,
+                     facecolor='white', edgecolor='#cccccc',
+                     labelcolor='#333333')
             
-            # Return first scatter object for consistency, though legend is the main info
             scatter = scatter_list[0] if scatter_list else None
         
         return scatter

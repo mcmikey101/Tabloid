@@ -143,8 +143,8 @@ class DistributionPlotWidget(QWidget):
 
         # Figure for plotting - responsive sizing
         # Use smaller figsize; will adapt better to container
-        self.figure = Figure(figsize=(7, 4), dpi=90, facecolor='#262738', edgecolor='#3a3d4a')
-        self.figure.patch.set_facecolor('#262738')
+        self.figure = Figure(figsize=(7, 4), dpi=90, facecolor='white', edgecolor='#cccccc')
+        self.figure.patch.set_facecolor('white')
         self.figure.subplots_adjust(left=0.1, right=0.95, top=0.92, bottom=0.15)
         self.canvas = FigureCanvasQTAgg(self.figure)
         plot_layout.addWidget(self.canvas)
@@ -203,8 +203,8 @@ class DistributionPlotWidget(QWidget):
         scatter_layout.addLayout(controls_layout)
         
         # Scatter figure - responsive sizing
-        self.scatter_figure = Figure(figsize=(7, 4), dpi=90, facecolor='#262738', edgecolor='#3a3d4a')
-        self.scatter_figure.patch.set_facecolor('#262738')
+        self.scatter_figure = Figure(figsize=(7, 4), dpi=90, facecolor='white', edgecolor='#cccccc')
+        self.scatter_figure.patch.set_facecolor('white')
         self.scatter_figure.subplots_adjust(left=0.1, right=0.95, top=0.92, bottom=0.15)
         self.scatter_canvas = FigureCanvasQTAgg(self.scatter_figure)
         scatter_layout.addWidget(self.scatter_canvas)
@@ -254,9 +254,10 @@ class DistributionPlotWidget(QWidget):
             self.column_select_combo.addItems(all_cols)
             self.column_select_combo.blockSignals(False)
             
-            # Update color column options for scatter plot
+            # Update color column options for scatter plot — "None" always first
             self.scatter_color_combo.blockSignals(True)
             self.scatter_color_combo.clear()
+            self.scatter_color_combo.addItem("None")
             self.scatter_color_combo.addItems(all_cols)
             self.scatter_color_combo.blockSignals(False)
         
@@ -426,25 +427,21 @@ class DistributionPlotWidget(QWidget):
         self.canvas.draw()
 
     def _apply_dark_theme_styling(self, ax):
-        """Apply dark theme styling to matplotlib axes."""
-        # Background colors
-        ax.set_facecolor('#262738')
-        ax.patch.set_facecolor('#262738')
+        """Apply light theme styling to matplotlib axes."""
+        ax.set_facecolor('white')
+        ax.patch.set_facecolor('white')
         
-        # Text and spine colors
-        ax.spines['bottom'].set_color('#3a3d4a')
-        ax.spines['left'].set_color('#3a3d4a')
-        ax.spines['top'].set_color('#3a3d4a')
-        ax.spines['right'].set_color('#3a3d4a')
+        ax.spines['bottom'].set_color('#cccccc')
+        ax.spines['left'].set_color('#cccccc')
+        ax.spines['top'].set_color('#cccccc')
+        ax.spines['right'].set_color('#cccccc')
         
-        # Tick and label colors
-        ax.tick_params(colors='#e0e0e0')
-        ax.xaxis.label.set_color('#e0e0e0')
-        ax.yaxis.label.set_color('#e0e0e0')
-        ax.title.set_color('#e0e0e0')
+        ax.tick_params(colors='#333333')
+        ax.xaxis.label.set_color('#333333')
+        ax.yaxis.label.set_color('#333333')
+        ax.title.set_color('#333333')
         
-        # Grid styling
-        ax.grid(True, alpha=0.1, color='#3a3d4a', linestyle='--')
+        ax.grid(True, alpha=0.4, color='#dddddd', linestyle='--')
 
     def _plot_count(self, series, ax, column_name):
         """Plot count plot for categorical data."""
@@ -480,7 +477,7 @@ class DistributionPlotWidget(QWidget):
         
         layout = QVBoxLayout(dialog)
         
-        label = QLabel("Select 2-3 numerical columns for scatter plot:")
+        label = QLabel("Select 2 or 3 numerical columns for scatter plot:")
         label.setStyleSheet("color: #e0e0e0;")
         layout.addWidget(label)
         
@@ -519,9 +516,13 @@ class DistributionPlotWidget(QWidget):
                 if list_widget.item(i).checkState() == Qt.CheckState.Checked:
                     selected.append(list_widget.item(i).text())
             
-            if len(selected) < 2 or len(selected) > 3:
+            if len(selected) < 2:
                 from PySide6.QtWidgets import QMessageBox
-                QMessageBox.warning(dialog, "Error", "Select 2 or 3 columns.")
+                QMessageBox.warning(dialog, "Error", "Select at least 2 columns.")
+                return
+            if len(selected) > 3:
+                from PySide6.QtWidgets import QMessageBox
+                QMessageBox.warning(dialog, "Error", "Select at most 3 columns.")
                 return
             
             self.selected_scatter_columns = selected
@@ -546,21 +547,21 @@ class DistributionPlotWidget(QWidget):
             self._plot_scatter()
     
     def _plot_scatter(self):
-        """Draw scatter plot with selected columns and color column."""
+        """Draw scatter plot with selected columns and optional color column."""
         if self.df is None or not self.selected_scatter_columns:
             return
         
         color_col = self.scatter_color_combo.currentText()
-        if not color_col or color_col not in self.df.columns:
-            return
+        use_color = color_col and color_col != "None" and color_col in self.df.columns
         
         df = self.df.copy()
         
-        # Remove rows with missing values in selected columns
-        cols_to_plot = self.selected_scatter_columns + [color_col]
+        cols_to_plot = list(self.selected_scatter_columns)
+        if use_color and color_col not in cols_to_plot:
+            cols_to_plot = cols_to_plot + [color_col]
+        
         df = df[cols_to_plot].dropna()
         
-        # Limit data points to prevent performance issues
         max_points = 1500
         if len(df) > max_points:
             df = df.sample(n=max_points, random_state=42)
@@ -572,75 +573,76 @@ class DistributionPlotWidget(QWidget):
         
         try:
             if len(self.selected_scatter_columns) == 2:
-                # 2D scatter plot
                 ax = self.scatter_figure.add_subplot(111)
+                x_col, y_col = self.selected_scatter_columns[0], self.selected_scatter_columns[1]
                 
-                # Get unique classes and create color map
-                classes = df[color_col].unique()
-                colors = plt.cm.tab10(np.linspace(0, 1, len(classes)))
-                color_map = {cls: colors[i] for i, cls in enumerate(classes)}
+                if use_color:
+                    classes = df[color_col].unique()
+                    colors = plt.cm.tab10(np.linspace(0, 1, len(classes)))
+                    color_map = {cls: colors[i] for i, cls in enumerate(classes)}
+                    for cls in classes:
+                        mask = df[color_col] == cls
+                        ax.scatter(
+                            df[mask][x_col], df[mask][y_col],
+                            label=str(cls), alpha=0.6, s=50, color=color_map[cls],
+                            edgecolors='white', linewidths=0.3
+                        )
+                    ax.legend(title=color_col, loc='best', fontsize=8,
+                             facecolor='white', edgecolor='#cccccc', labelcolor='#333333')
+                else:
+                    ax.scatter(df[x_col], df[y_col],
+                              alpha=0.6, s=50, color='#5b7cfa',
+                              edgecolors='white', linewidths=0.3)
                 
-                for cls in classes:
-                    mask = df[color_col] == cls
-                    ax.scatter(
-                        df[mask][self.selected_scatter_columns[0]],
-                        df[mask][self.selected_scatter_columns[1]],
-                        label=str(cls),
-                        alpha=0.6,
-                        s=50,
-                        color=color_map[cls]
-                    )
-                
-                ax.set_xlabel(self.selected_scatter_columns[0])
-                ax.set_ylabel(self.selected_scatter_columns[1])
-                ax.set_title(f"Scatter Plot: {self.selected_scatter_columns[0]} vs {self.selected_scatter_columns[1]}")
-                ax.legend(title=color_col, loc='best', fontsize=8)
+                ax.set_xlabel(x_col)
+                ax.set_ylabel(y_col)
+                ax.set_title(f"Scatter Plot: {x_col} vs {y_col}")
                 self._apply_dark_theme_styling(ax)
             
-            else:  # 3D scatter plot
+            else:  # 3D
                 ax = self.scatter_figure.add_subplot(111, projection='3d')
+                x_col = self.selected_scatter_columns[0]
+                y_col = self.selected_scatter_columns[1]
+                z_col = self.selected_scatter_columns[2]
                 
-                # Get unique classes and create color map
-                classes = df[color_col].unique()
-                colors = plt.cm.tab10(np.linspace(0, 1, len(classes)))
-                color_map = {cls: colors[i] for i, cls in enumerate(classes)}
+                if use_color:
+                    classes = df[color_col].unique()
+                    colors = plt.cm.tab10(np.linspace(0, 1, len(classes)))
+                    color_map = {cls: colors[i] for i, cls in enumerate(classes)}
+                    for cls in classes:
+                        mask = df[color_col] == cls
+                        ax.scatter(
+                            df[mask][x_col], df[mask][y_col], df[mask][z_col],
+                            label=str(cls), alpha=0.6, s=50, color=color_map[cls]
+                        )
+                    ax.legend(title=color_col, loc='best', fontsize=8,
+                             facecolor='white', edgecolor='#cccccc', labelcolor='#333333')
+                else:
+                    ax.scatter(df[x_col], df[y_col], df[z_col],
+                              alpha=0.6, s=50, color='#5b7cfa')
                 
-                for cls in classes:
-                    mask = df[color_col] == cls
-                    ax.scatter(
-                        df[mask][self.selected_scatter_columns[0]],
-                        df[mask][self.selected_scatter_columns[1]],
-                        df[mask][self.selected_scatter_columns[2]],
-                        label=str(cls),
-                        alpha=0.6,
-                        s=50,
-                        color=color_map[cls]
-                    )
+                ax.set_xlabel(x_col)
+                ax.set_ylabel(y_col)
+                ax.set_zlabel(z_col)
+                ax.set_title("3D Scatter Plot")
                 
-                ax.set_xlabel(self.selected_scatter_columns[0])
-                ax.set_ylabel(self.selected_scatter_columns[1])
-                ax.set_zlabel(self.selected_scatter_columns[2])
-                ax.set_title(f"3D Scatter Plot")
-                ax.legend(title=color_col, loc='best', fontsize=8)
-                
-                # Apply dark theme to 3D plot
                 ax.xaxis.pane.fill = False
                 ax.yaxis.pane.fill = False
                 ax.zaxis.pane.fill = False
-                ax.xaxis.pane.set_edgecolor('#3a3d4a')
-                ax.yaxis.pane.set_edgecolor('#3a3d4a')
-                ax.zaxis.pane.set_edgecolor('#3a3d4a')
-                ax.xaxis.label.set_color('#e0e0e0')
-                ax.yaxis.label.set_color('#e0e0e0')
-                ax.zaxis.label.set_color('#e0e0e0')
-                ax.title.set_color('#e0e0e0')
-                ax.tick_params(colors='#e0e0e0')
+                ax.xaxis.pane.set_edgecolor('#cccccc')
+                ax.yaxis.pane.set_edgecolor('#cccccc')
+                ax.zaxis.pane.set_edgecolor('#cccccc')
+                ax.xaxis.label.set_color('#333333')
+                ax.yaxis.label.set_color('#333333')
+                ax.zaxis.label.set_color('#333333')
+                ax.title.set_color('#333333')
+                ax.tick_params(colors='#333333')
             
             self.scatter_figure.tight_layout()
         except Exception as e:
             ax = self.scatter_figure.add_subplot(111)
             ax.text(0.5, 0.5, f"Error plotting: {str(e)}",
-                ha="center", va="center", transform=ax.transAxes, color='#e0e0e0')
+                ha="center", va="center", transform=ax.transAxes, color='#333333')
         
         self.scatter_canvas.draw()
 

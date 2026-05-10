@@ -491,6 +491,12 @@ class DatasetsPage(QWidget):
             version_name=version_name
         )
 
+        self.data_table.table.clearSelection()
+        self.column_stats.display_stats({})
+        self.distribution_plot.figure.clear()
+        self.distribution_plot.canvas.draw()
+        self.distribution_plot.column_info_label.setText("Select a column to visualize")
+
     # -----------------------------------------------------
     # Column Statistics
     # -----------------------------------------------------
