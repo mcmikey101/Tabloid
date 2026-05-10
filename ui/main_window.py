@@ -3,11 +3,10 @@
 from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
-    QHBoxLayout,
     QVBoxLayout,
+    QHBoxLayout,
     QPushButton,
     QStackedWidget,
-    QSizePolicy,
     QApplication
 )
 from PySide6.QtCore import Qt
@@ -47,11 +46,13 @@ class MainWindow(QMainWindow):
 
     def _build_ui(self):
         root = QWidget()
-        root_layout = QHBoxLayout(root)
+        root_layout = QVBoxLayout(root)
         root_layout.setContentsMargins(0, 0, 0, 0)
+        root_layout.setSpacing(0)
 
-        # Sidebar navigation
-        sidebar = self._create_sidebar()
+        # Top navbar navigation
+        navbar = self._create_navbar()
+        root_layout.addLayout(navbar)
 
         # Page stack
         self.pages = QStackedWidget()
@@ -59,32 +60,14 @@ class MainWindow(QMainWindow):
         self.pages.addWidget(ExperimentsPage())
         self.pages.addWidget(MLLabPage())
 
-        root_layout.addWidget(sidebar)
         root_layout.addWidget(self.pages)
 
         self.setCentralWidget(root)
 
-    def _create_sidebar(self):
-        sidebar = QWidget()
-        self.sidebar_expanded = True
-
-        self.sidebar_expanded_width = 200
-        self.sidebar_collapsed_width = 60
-
-        sidebar.setMinimumWidth(self.sidebar_collapsed_width)
-        sidebar.setMaximumWidth(self.sidebar_expanded_width)
-        sidebar.setFixedWidth(self.sidebar_expanded_width)
-
-        layout = QVBoxLayout(sidebar)
-        layout.setContentsMargins(4, 4, 4, 4)
-        layout.setSpacing(4)
-        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-
-        # Toggle button
-        self.toggle_btn = QPushButton("☰")
-        self.toggle_btn.setFixedHeight(40)
-        self.toggle_btn.clicked.connect(self._toggle_sidebar)
-        layout.addWidget(self.toggle_btn)
+    def _create_navbar(self):
+        layout = QHBoxLayout()
+        layout.setContentsMargins(8, 6, 8, 6)
+        layout.setSpacing(8)
 
         # Navigation buttons
         self.datasets_btn = QPushButton("Datasets")
@@ -92,8 +75,25 @@ class MainWindow(QMainWindow):
         self.ml_lab_btn = QPushButton("ML Lab")
 
         for btn in [self.datasets_btn, self.experiments_btn, self.ml_lab_btn]:
-            btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-            btn.setFixedHeight(40)
+            btn.setFixedHeight(32)
+            btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #3a3d4a;
+                    color: #e0e0e0;
+                    border: 1px solid #3a3d4a;
+                    padding: 4px 16px;
+                    border-radius: 3px;
+                    font-weight: bold;
+                }
+                QPushButton:hover {
+                    background-color: #4a4d5a;
+                    border: 1px solid #5b7cfa;
+                }
+                QPushButton:pressed {
+                    background-color: #5b7cfa;
+                    color: white;
+                }
+            """)
             layout.addWidget(btn)
 
         self.datasets_btn.clicked.connect(lambda: self.pages.setCurrentIndex(0))
@@ -101,24 +101,4 @@ class MainWindow(QMainWindow):
         self.ml_lab_btn.clicked.connect(lambda: self.pages.setCurrentIndex(2))
 
         layout.addStretch()
-
-        return sidebar
-
-
-    def _toggle_sidebar(self):
-        if self.sidebar_expanded:
-            self.sidebar_expanded = False
-            self.sender().parent().setFixedWidth(self.sidebar_collapsed_width)
-
-            # Collapse: hide text
-            self.datasets_btn.setText("")
-            self.experiments_btn.setText("")
-            self.ml_lab_btn.setText("")
-        else:
-            self.sidebar_expanded = True
-            self.sender().parent().setFixedWidth(self.sidebar_expanded_width)
-
-            # Expand: restore text
-            self.datasets_btn.setText("Datasets")
-            self.experiments_btn.setText("Experiments")
-            self.ml_lab_btn.setText("ML Lab")
+        return layout

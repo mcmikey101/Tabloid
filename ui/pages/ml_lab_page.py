@@ -18,9 +18,13 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QDialog,
-    QScrollArea
+    QScrollArea,
+    QCheckBox,
+    QProgressBar,
+    QFrame
 )
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont
 from storage.file_store import FileStore
 from core.dataset_manager import DatasetManager
 from core.version_manager import VersionManager
@@ -28,6 +32,7 @@ from core.version_manager import VersionManager
 from core import modeling
 from core import evaluation
 from experiments.registry import ExperimentManager
+from ui.widgets.classification_plots import ConfusionMatrixWidget, ROCCurveWidget
 
 import pickle 
 from pathlib import Path
@@ -59,6 +64,10 @@ class MLLabPage(QWidget):
         self.current_df = None
         self.current_model = None
         self.current_splits = None
+        self.current_y_test = None
+        self.current_y_pred = None
+        self.current_confusion_matrix = None
+        self.current_roc_data = None
         
         self._build_ui()
         self._connect_signals()
@@ -185,7 +194,7 @@ class MLLabPage(QWidget):
                 return
             
             self.selected_features = selected
-            self.selected_features_label.setText(f"{len(selected)} features selected")
+            self._update_feature_chips_display()
             dialog.accept()
         
         select_all_btn.clicked.connect(select_all)
@@ -201,6 +210,20 @@ class MLLabPage(QWidget):
         
         layout.addLayout(button_layout)
         dialog.exec()
+    
+    def _update_feature_chips_display(self):
+        """Update the feature chips display."""
+        if self.selected_features is None:
+            self.selected_features_label.setText("All features selected")
+            self.selected_features_label.setStyleSheet("")
+            return
+        
+        # Create a display string with feature names
+        features_text = ", ".join(self.selected_features[:3])
+        if len(self.selected_features) > 3:
+            features_text += f"... (+{len(self.selected_features) - 3} more)"
+        self.selected_features_label.setText(f"Features: {features_text}")
+        self.selected_features_label.setStyleSheet("color: #51cf66; font-size: 9px;")
 
     def _load_datasets(self):
         """Load available datasets into combo box."""
@@ -450,10 +473,13 @@ class MLLabPage(QWidget):
     # Hyperparameters
     # ---------------------------------------------------------
     def _create_hyperparameter_section(self):
-        box = QGroupBox("Hyperparameters")
-        layout = QFormLayout(box)
+        box = QGroupBox("Configuration")
+        layout = QVBoxLayout(box)
 
-        # Common parameters
+        # ===== Split Configuration (Global Parameters) =====
+        split_group = QGroupBox("Split Configuration")
+        split_layout = QFormLayout(split_group)
+        
         self.test_size = QDoubleSpinBox()
         self.test_size.setRange(0.05, 0.5)
         self.test_size.setValue(0.2)
@@ -462,10 +488,29 @@ class MLLabPage(QWidget):
         self.random_seed = QSpinBox()
         self.random_seed.setRange(0, 999999)
         self.random_seed.setValue(42)
+        
+        # Cross-validation
+        self.use_cv = QCheckBox("Use K-Fold Cross-Validation")
+        self.use_cv.setChecked(False)
+        
+        self.cv_folds = QSpinBox()
+        self.cv_folds.setRange(2, 10)
+        self.cv_folds.setValue(5)
+        self.cv_folds.setEnabled(False)
+        self.use_cv.toggled.connect(self.cv_folds.setEnabled)
 
-        layout.addRow("Test Size", self.test_size)
-        layout.addRow("Random Seed", self.random_seed)
-        layout.addRow("", QLabel(""))  # Spacer
+        split_layout.addRow("Test Size", self.test_size)
+        split_layout.addRow("Random Seed", self.random_seed)
+        split_layout.addRow(self.use_cv)
+        split_layout.addRow("K-Folds", self.cv_folds)
+        
+        layout.addWidget(split_group)
+        
+        # ===== Model Hyperparameters =====
+        hp_group = QGroupBox("Model Hyperparameters")
+        hp_layout = QFormLayout(hp_group)
+        
+        form_layout = hp_layout
         
         # ===== Logistic Regression =====
         self.lr_c = QDoubleSpinBox()
@@ -583,33 +628,35 @@ class MLLabPage(QWidget):
         self.gmm_n_init_label = QLabel("n_init")
 
         # Add all to layout (they'll be shown/hidden based on model selection)
-        layout.addRow(self.lr_c_label, self.lr_c)
-        layout.addRow(self.lr_max_iter_label, self.lr_max_iter)
-        layout.addRow(self.lr_solver_label, self.lr_solver)
-        layout.addRow(self.lr_penalty_label, self.lr_penalty)
+        form_layout.addRow(self.lr_c_label, self.lr_c)
+        form_layout.addRow(self.lr_max_iter_label, self.lr_max_iter)
+        form_layout.addRow(self.lr_solver_label, self.lr_solver)
+        form_layout.addRow(self.lr_penalty_label, self.lr_penalty)
         
-        layout.addRow(self.rf_n_estimators_label, self.rf_n_estimators)
-        layout.addRow(self.rf_max_depth_label, self.rf_max_depth)
-        layout.addRow(self.rf_min_samples_split_label, self.rf_min_samples_split)
-        layout.addRow(self.rf_min_samples_leaf_label, self.rf_min_samples_leaf)
+        form_layout.addRow(self.rf_n_estimators_label, self.rf_n_estimators)
+        form_layout.addRow(self.rf_max_depth_label, self.rf_max_depth)
+        form_layout.addRow(self.rf_min_samples_split_label, self.rf_min_samples_split)
+        form_layout.addRow(self.rf_min_samples_leaf_label, self.rf_min_samples_leaf)
         
-        layout.addRow(self.svm_c_label, self.svm_c)
-        layout.addRow(self.svm_kernel_label, self.svm_kernel)
-        layout.addRow(self.svm_gamma_label, self.svm_gamma)
+        form_layout.addRow(self.svm_c_label, self.svm_c)
+        form_layout.addRow(self.svm_kernel_label, self.svm_kernel)
+        form_layout.addRow(self.svm_gamma_label, self.svm_gamma)
         
-        layout.addRow(self.xgb_n_estimators_label, self.xgb_n_estimators)
-        layout.addRow(self.xgb_max_depth_label, self.xgb_max_depth)
-        layout.addRow(self.xgb_learning_rate_label, self.xgb_learning_rate)
-        layout.addRow(self.xgb_subsample_label, self.xgb_subsample)
-        layout.addRow(self.xgb_colsample_bytree_label, self.xgb_colsample_bytree)
+        form_layout.addRow(self.xgb_n_estimators_label, self.xgb_n_estimators)
+        form_layout.addRow(self.xgb_max_depth_label, self.xgb_max_depth)
+        form_layout.addRow(self.xgb_learning_rate_label, self.xgb_learning_rate)
+        form_layout.addRow(self.xgb_subsample_label, self.xgb_subsample)
+        form_layout.addRow(self.xgb_colsample_bytree_label, self.xgb_colsample_bytree)
         
-        layout.addRow(self.kmeans_n_clusters_label, self.kmeans_n_clusters)
-        layout.addRow(self.kmeans_init_label, self.kmeans_init)
-        layout.addRow(self.kmeans_max_iter_label, self.kmeans_max_iter)
+        form_layout.addRow(self.kmeans_n_clusters_label, self.kmeans_n_clusters)
+        form_layout.addRow(self.kmeans_init_label, self.kmeans_init)
+        form_layout.addRow(self.kmeans_max_iter_label, self.kmeans_max_iter)
         
-        layout.addRow(self.gmm_n_components_label, self.gmm_n_components)
-        layout.addRow(self.gmm_covariance_type_label, self.gmm_covariance_type)
-        layout.addRow(self.gmm_n_init_label, self.gmm_n_init)
+        form_layout.addRow(self.gmm_n_components_label, self.gmm_n_components)
+        form_layout.addRow(self.gmm_covariance_type_label, self.gmm_covariance_type)
+        form_layout.addRow(self.gmm_n_init_label, self.gmm_n_init)
+        
+        layout.addWidget(hp_group)
 
         return box
 
@@ -618,18 +665,54 @@ class MLLabPage(QWidget):
     # ---------------------------------------------------------
     def _create_training_section(self):
         container = QWidget()
-        layout = QHBoxLayout(container)
+        layout = QVBoxLayout(container)
 
+        # Progress bar (initially hidden)
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setRange(0, 0)  # Indeterminate progress
+        self.progress_bar.setVisible(False)
+        self.progress_bar.setMaximumHeight(8)
+        self.progress_bar.setStyleSheet("""
+            QProgressBar {
+                border: none;
+                background-color: #1a1a25;
+                padding: 0px;
+            }
+            QProgressBar::chunk {
+                background-color: #5b7cfa;
+            }
+        """)
+        layout.addWidget(self.progress_bar)
+
+        # Train button
+        button_layout = QHBoxLayout()
         self.train_button = QPushButton("Train Model")
+        self.train_button.setMinimumHeight(36)
+        self.train_button.setStyleSheet("""
+            QPushButton {
+                background-color: #5b7cfa;
+                color: white;
+                border: none;
+                padding: 8px 20px;
+                border-radius: 3px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #4c63d2;
+            }
+        """)
         self.train_button.clicked.connect(self._on_train_clicked)
 
         self.export_button = QPushButton("Show on Experiments Page")
+        self.export_button.setMinimumHeight(36)
         self.export_button.clicked.connect(self._on_show_experiments_clicked)
         self.export_button.setEnabled(False)
 
-        layout.addStretch()
-        layout.addWidget(self.train_button)
-        layout.addWidget(self.export_button)
+        button_layout.addStretch()
+        button_layout.addWidget(self.train_button)
+        button_layout.addWidget(self.export_button)
+        
+        layout.addLayout(button_layout)
 
         return container
     
@@ -793,6 +876,25 @@ class MLLabPage(QWidget):
                     current_splits["X_test"],
                     current_splits["y_test"]
                 )
+                
+                # Get confusion matrix and ROC curve data for classification
+                cm_data = evaluation.get_confusion_matrix(
+                    current_model,
+                    current_splits["X_test"],
+                    current_splits["y_test"]
+                )
+                results["confusion_matrix_data"] = cm_data
+                
+                try:
+                    roc_data = evaluation.get_roc_curve_data(
+                        current_model,
+                        current_splits["X_test"],
+                        current_splits["y_test"]
+                    )
+                    results["roc_curve_data"] = roc_data
+                except Exception as e:
+                    print(f"Could not generate ROC curve: {e}")
+                    results["roc_curve_data"] = None
             else:
                 metrics = evaluation.evaluate_regression(
                     current_model,
@@ -845,8 +947,15 @@ class MLLabPage(QWidget):
             if "splits" in result:
                 self.current_splits = result["splits"]
             
+            # Store confusion matrix and ROC curve data for classification
+            if result["task"] == "Classification":
+                if "confusion_matrix_data" in result:
+                    self.current_confusion_matrix = result["confusion_matrix_data"]
+                if "roc_curve_data" in result:
+                    self.current_roc_data = result["roc_curve_data"]
+            
             # Display metrics
-            self.display_metrics(result["metrics"])
+            self.display_metrics(result["metrics"], result["task"])
             self.export_button.setEnabled(True)
             
             # Ask user if they want to save the experiment
@@ -925,31 +1034,122 @@ class MLLabPage(QWidget):
         box = QGroupBox("Model Metrics")
         layout = QVBoxLayout(box)
 
-        self.metrics_text = QTextEdit()
-        self.metrics_text.setReadOnly(True)
-
-        layout.addWidget(self.metrics_text)
+        # Metrics container
+        self.metrics_container = QWidget()
+        self.metrics_layout = QVBoxLayout(self.metrics_container)
+        self.metrics_layout.setSpacing(12)
+        self.metrics_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Empty state
+        self.metrics_empty = QLabel("No model trained yet")
+        self.metrics_empty.setStyleSheet("color: #999999; font-size: 10px;")
+        self.metrics_layout.addWidget(self.metrics_empty)
+        
+        layout.addWidget(self.metrics_container)
+        
+        # Confusion matrix and ROC curve widgets (initially hidden)
+        self.confusion_matrix_widget = ConfusionMatrixWidget()
+        self.confusion_matrix_widget.setVisible(False)
+        layout.addWidget(self.confusion_matrix_widget)
+        
+        self.roc_curve_widget = ROCCurveWidget()
+        self.roc_curve_widget.setVisible(False)
+        layout.addWidget(self.roc_curve_widget)
+        
+        layout.addStretch()
 
         return box
 
-    def display_metrics(self, metrics: dict):
-        """Display metrics in text area."""
-        lines = []
-        first_metric = True
+    def display_metrics(self, metrics: dict, task: str = None):
+        """Display metrics as formatted cards with visual indicators."""
+        # Clear previous metrics
+        while self.metrics_layout.count():
+            item = self.metrics_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        
+        if not metrics:
+            self.metrics_empty = QLabel("No metrics available")
+            self.metrics_empty.setStyleSheet("color: #999999; font-size: 10px;")
+            self.metrics_layout.addWidget(self.metrics_empty)
+            return
+        
+        # Display each metric as a card
+        first = True
         for key, value in metrics.items():
-            # Rename first metric to "Main Metric"
-            if first_metric:
-                display_key = "Main Metric"
-                first_metric = False
-            else:
-                display_key = key
+            metric_card = self._create_metric_card(key, value, is_main=first)
+            self.metrics_layout.addWidget(metric_card)
+            first = False
+        
+        self.metrics_layout.addStretch()
+        
+        # Display confusion matrix and ROC curve for classification
+        if task == "Classification":
+            self.confusion_matrix_widget.setVisible(False)
+            self.roc_curve_widget.setVisible(False)
             
-            if isinstance(value, float):
-                lines.append(f"{display_key}: {value:.4f}")
+            if self.current_confusion_matrix is not None:
+                self.confusion_matrix_widget.set_data(
+                    self.current_confusion_matrix["confusion_matrix"],
+                    self.current_confusion_matrix["classes"],
+                    self.current_confusion_matrix["y_test"],
+                    self.current_confusion_matrix["y_pred"]
+                )
+                self.confusion_matrix_widget.setVisible(True)
+            
+            if self.current_roc_data is not None and self.current_roc_data:
+                self.roc_curve_widget.set_data(self.current_roc_data)
+                self.roc_curve_widget.setVisible(True)
+    
+    def _create_metric_card(self, name: str, value, is_main: bool = False) -> QFrame:
+        """Create a styled metric card with visual indicators."""
+        card = QFrame()
+        card.setStyleSheet("""
+            QFrame {
+                background-color: #1a1a25;
+                border: 1px solid #3a3d4a;
+                border-radius: 4px;
+                padding: 12px;
+            }
+        """)
+        layout = QHBoxLayout(card)
+        layout.setContentsMargins(12, 8, 12, 8)
+        layout.setSpacing(12)
+        
+        # Metric name
+        name_label = QLabel(f"{name}:" if not is_main else "Main Metric:")
+        name_label.setStyleSheet("color: #b0b0b0; font-weight: bold;" if not is_main else "color: #e0e0e0; font-weight: bold; font-size: 11px;")
+        layout.addWidget(name_label)
+        
+        # Format value
+        if isinstance(value, float):
+            value_str = f"{value:.4f}"
+        else:
+            value_str = str(value)
+        
+        # Metric value with color indicator (for classification metrics)
+        value_label = QLabel(value_str)
+        value_font = QFont()
+        value_font.setBold(True)
+        value_font.setPointSize(11 if is_main else 10)
+        value_label.setFont(value_font)
+        
+        # Color code based on accuracy/score thresholds (for metrics like accuracy, f1, etc.)
+        if isinstance(value, (int, float)) and 0 <= value <= 1:
+            if value >= 0.85:
+                color = "#51cf66"  # Green
+            elif value >= 0.70:
+                color = "#ffd43b"  # Yellow
             else:
-                lines.append(f"{display_key}: {value}")
-
-        self.metrics_text.setText("\n".join(lines))
+                color = "#ff6b6b"  # Red
+            value_label.setStyleSheet(f"color: {color};")
+        else:
+            value_label.setStyleSheet("color: #51cf66;")
+        
+        layout.addWidget(value_label)
+        layout.addStretch()
+        
+        return card
 
     def _save_clustering_as_version(self, labels, model_name):
         """Save clustered dataset as a new version.""" 

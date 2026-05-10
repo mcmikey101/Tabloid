@@ -12,7 +12,10 @@ from sklearn.metrics import (
     mean_squared_error,
     mean_absolute_error,
     r2_score,
-    silhouette_score
+    silhouette_score,
+    confusion_matrix,
+    roc_curve,
+    auc
 )
 
 
@@ -83,3 +86,69 @@ def evaluate_clustering(
     return {
         "silhouette_score": score,
     }
+
+
+# ----------------------------------------------------------------------
+# Confusion Matrix and ROC Curve
+# ----------------------------------------------------------------------
+
+def get_confusion_matrix(
+    model,
+    X_test,
+    y_test,
+) -> Dict[str, Any]:
+    """Generate confusion matrix data for classification models."""
+    y_pred = model.predict(X_test)
+    cm = confusion_matrix(y_test, y_pred)
+    
+    # Get unique classes from y_test
+    classes = np.unique(y_test)
+    
+    return {
+        "confusion_matrix": cm,
+        "classes": classes,
+        "y_pred": y_pred,
+        "y_test": y_test,
+    }
+
+
+def get_roc_curve_data(
+    model,
+    X_test,
+    y_test,
+) -> Dict[str, Any]:
+    """Generate ROC curve data for binary and multi-class classification."""
+    roc_data = {}
+    
+    if not hasattr(model, "predict_proba"):
+        return roc_data
+    
+    y_pred_proba = model.predict_proba(X_test)
+    classes = model.classes_
+    
+    # For binary classification
+    if len(classes) == 2:
+        fpr, tpr, _ = roc_curve(y_test, y_pred_proba[:, 1])
+        roc_auc = auc(fpr, tpr)
+        roc_data["binary"] = {
+            "fpr": fpr,
+            "tpr": tpr,
+            "auc": roc_auc,
+            "class": classes[1]
+        }
+    else:
+        # For multi-class, use One-vs-Rest approach
+        from sklearn.preprocessing import label_binarize
+        y_test_bin = label_binarize(y_test, classes=classes)
+        
+        for i, class_label in enumerate(classes):
+            fpr, tpr, _ = roc_curve(y_test_bin[:, i], y_pred_proba[:, i])
+            roc_auc = auc(fpr, tpr)
+            roc_data[str(i)] = {
+                "fpr": fpr,
+                "tpr": tpr,
+                "auc": roc_auc,
+                "class": class_label
+            }
+    
+    return roc_data

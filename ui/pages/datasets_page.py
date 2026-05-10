@@ -71,7 +71,7 @@ class DatasetsPage(QWidget):
         version_widget = self._create_version_section()
         splitter.addWidget(version_widget)
 
-        splitter.setSizes([1, 3, 1])  # Proportional: 1:3:1 ratio for responsive scaling
+        splitter.setSizes([1, 2, 1])  # Proportional: 1:2:1 ratio for responsive scaling
         splitter.setCollapsible(0, True)  # Allow sidebar collapse on small screens
         splitter.setCollapsible(2, True)  # Allow version tree collapse on small screens
 
@@ -103,7 +103,6 @@ class DatasetsPage(QWidget):
 
         # ===== PRIMARY ACTION BUTTONS =====
         self.operations_btn = QPushButton("Preprocess")
-        self.operations_btn.setMaximumWidth(85)
         self.operations_btn.setStyleSheet("""
             QPushButton {
                 background-color: #5b7cfa;
@@ -119,7 +118,6 @@ class DatasetsPage(QWidget):
         """)
         
         self.train_model_btn = QPushButton("Train Model")
-        self.train_model_btn.setMaximumWidth(90)
         self.train_model_btn.setStyleSheet("""
             QPushButton {
                 background-color: #5b7cfa;
@@ -144,7 +142,6 @@ class DatasetsPage(QWidget):
         
         # ===== SECONDARY ACTION BUTTONS =====
         self.synthesize_btn = QPushButton("Synthesize")
-        self.synthesize_btn.setMaximumWidth(85)
         self.synthesize_btn.setStyleSheet("""
             QPushButton {
                 background-color: #3a3d4a;
@@ -160,7 +157,6 @@ class DatasetsPage(QWidget):
         """)
         
         self.export_btn = QPushButton("Export")
-        self.export_btn.setMaximumWidth(70)
         self.export_btn.setStyleSheet("""
             QPushButton {
                 background-color: #3a3d4a;
@@ -176,7 +172,6 @@ class DatasetsPage(QWidget):
         """)
         
         self.compare_plots_btn = QPushButton("Compare")
-        self.compare_plots_btn.setMaximumWidth(70)
         self.compare_plots_btn.setStyleSheet("""
             QPushButton {
                 background-color: #3a3d4a;
