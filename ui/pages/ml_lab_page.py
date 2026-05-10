@@ -231,25 +231,25 @@ class MLLabPage(QWidget):
         self.dataset_combo.addItems(datasets)
 
     def _refresh_datasets(self):
-        """Refresh the datasets list (called when page is shown)."""
         try:
             current_dataset = self.dataset_combo.currentText()
             datasets = self.dataset_manager.list_datasets()
-            
-            # Check if dataset list has changed
             current_items = [self.dataset_combo.itemText(i) for i in range(self.dataset_combo.count())]
-            
+
             if set(current_items) != set(datasets):
-                # Dataset list has changed, refresh it
                 self.dataset_combo.clear()
                 self.dataset_combo.addItems(datasets)
-                
-                # Try to restore previous selection, or select first item
                 if current_dataset in datasets:
                     index = self.dataset_combo.findText(current_dataset)
                     self.dataset_combo.setCurrentIndex(index)
                 else:
                     self.dataset_combo.setCurrentIndex(0)
+            
+            # Always refresh versions for the currently selected dataset
+            # so versions created on other pages are reflected immediately
+            selected = self.dataset_combo.currentText()
+            if selected:
+                self._on_dataset_changed(selected)
         except Exception as e:
             print(f"Error refreshing datasets: {e}")
 

@@ -333,8 +333,7 @@ class DatasetsPage(QWidget):
                 "Please load a dataset and version first."
             )
             return
-        
-        # Get the main window to access the ML Lab page
+
         main_window = self.window()
         if not hasattr(main_window, 'pages'):
             QMessageBox.critical(
@@ -343,24 +342,25 @@ class DatasetsPage(QWidget):
                 "Could not access ML Lab page."
             )
             return
-        
-        # Get the ML Lab page (index 2)
+
         ml_lab_page = main_window.pages.widget(2)
-        
-        # Set the dataset and version in the ML Lab page
+
         try:
-            # Set dataset
             ml_lab_page.dataset_combo.setCurrentText(self.current_dataset)
-            # Set version
+
+            ml_lab_page.version_combo.blockSignals(True)
+            ml_lab_page._on_dataset_changed(self.current_dataset)
             ml_lab_page.version_combo.setCurrentText(self.current_version)
+            ml_lab_page.version_combo.blockSignals(False)
+
+            ml_lab_page._on_version_changed(self.current_version)
         except Exception as e:
             QMessageBox.warning(
                 self,
                 "Warning",
                 f"Could not pre-select dataset/version: {str(e)}"
             )
-        
-        # Switch to ML Lab page
+
         main_window.pages.setCurrentIndex(2)
 
     def open_synthesis_dialog(self):
@@ -375,6 +375,7 @@ class DatasetsPage(QWidget):
 
         dialog = SynthesisDialog(self)
         dialog.set_dataframe(self.current_df)
+        dialog.set_source_info(self.current_dataset, self.current_version)
 
         if dialog.exec() == SynthesisDialog.Accepted:
             result_df, result_config = dialog.get_results()
@@ -402,6 +403,7 @@ class DatasetsPage(QWidget):
                 )
                 # Reload and display
                 self.load_dataset(self.current_dataset)
+                self._refresh_ml_lab_versions()
                 self.version_tree.select_version(version_name)
                 self.load_version(version_name)
                 QMessageBox.information(
@@ -506,6 +508,19 @@ class DatasetsPage(QWidget):
 
         self.column_stats.display_stats(stats)
 
+    def _refresh_ml_lab_versions(self):
+        """Refresh the version combo in ML Lab page after a new version is created."""
+        try:
+            main_window = self.window()
+            if hasattr(main_window, 'pages'):
+                ml_lab_page = main_window.pages.widget(2)
+                if ml_lab_page and hasattr(ml_lab_page, '_on_dataset_changed'):
+                    current_ml_dataset = ml_lab_page.dataset_combo.currentText()
+                    if current_ml_dataset == self.current_dataset:
+                        ml_lab_page._on_dataset_changed(self.current_dataset)
+        except Exception:
+            pass
+
     # -----------------------------------------------------
     # Dataset Import
     # -----------------------------------------------------
@@ -594,6 +609,7 @@ class DatasetsPage(QWidget):
 
                 # Reload version tree
                 self.load_dataset(self.current_dataset)
+                self._refresh_ml_lab_versions()
 
                 # Auto-select the new version
                 self.version_tree.select_version(version_name)
