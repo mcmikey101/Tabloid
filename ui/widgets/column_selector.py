@@ -68,7 +68,7 @@ class ColumnSelectorPanel(QWidget):
         layout.setSpacing(8)
         
         # Title
-        title = QLabel("Select Columns:")
+        title = QLabel("Выберите столбцы:")
         title_font = QFont()
         title_font.setBold(True)
         title.setFont(title_font)
@@ -76,9 +76,9 @@ class ColumnSelectorPanel(QWidget):
         
         # Search field
         search_layout = QHBoxLayout()
-        search_label = QLabel("Search:")
+        search_label = QLabel("Поиск:")
         self.search_field = QLineEdit()
-        self.search_field.setPlaceholderText("Filter columns...")
+        self.search_field.setPlaceholderText("Фильтр столбцов...")
         self.search_field.textChanged.connect(self._filter_columns)
         search_layout.addWidget(search_label)
         search_layout.addWidget(self.search_field)
@@ -92,11 +92,11 @@ class ColumnSelectorPanel(QWidget):
         # Control buttons layout
         control_layout = QHBoxLayout()
         
-        select_all_btn = QPushButton("Select All")
+        select_all_btn = QPushButton("Выбрать все")
         select_all_btn.setMaximumWidth(100)
         select_all_btn.clicked.connect(self._select_all)
         
-        deselect_all_btn = QPushButton("Deselect All")
+        deselect_all_btn = QPushButton("Снять выбор")
         deselect_all_btn.setMaximumWidth(100)
         deselect_all_btn.clicked.connect(self._deselect_all)
         
@@ -112,7 +112,7 @@ class ColumnSelectorPanel(QWidget):
         self.ok_btn.setMinimumWidth(80)
         self.ok_btn.clicked.connect(self._on_ok)
         
-        self.cancel_btn = QPushButton("Cancel")
+        self.cancel_btn = QPushButton("Отмена")
         self.cancel_btn.setMinimumWidth(80)
         self.cancel_btn.clicked.connect(self._on_cancel)
         
@@ -185,7 +185,7 @@ class ColumnSelectorPanel(QWidget):
                 selected.append(col_name)
         
         if not selected:
-            QMessageBox.warning(self, "Warning", "Select at least one column.")
+            QMessageBox.warning(self, "Предупреждение", "Выберите хотя бы один столбец.")
             return
         
         self.selected_columns = selected

@@ -85,17 +85,17 @@ class ExperimentsPage(QWidget):
     # ---------------------------------------------------------
 
     def _create_filters(self):
-        box = QGroupBox("Filters")
+        box = QGroupBox("Фильтры")
         layout = QFormLayout(box)
 
         self.dataset_filter = QComboBox()
-        self.dataset_filter.addItem("All")
+        self.dataset_filter.addItem("Все")
 
         self.model_filter = QComboBox()
-        self.model_filter.addItem("All")
+        self.model_filter.addItem("Все")
 
-        layout.addRow("Dataset", self.dataset_filter)
-        layout.addRow("Model", self.model_filter)
+        layout.addRow("Датасет", self.dataset_filter)
+        layout.addRow("Модель", self.model_filter)
 
         return box
 
@@ -104,18 +104,18 @@ class ExperimentsPage(QWidget):
     # ---------------------------------------------------------
 
     def _create_experiments_table(self):
-        box = QGroupBox("Experiments")
+        box = QGroupBox("Эксперименты")
         layout = QVBoxLayout(box)
 
         self.table = QTableWidget()
         self.table.setColumnCount(6)
         self.table.setHorizontalHeaderLabels([
-            "Experiment ID",
-            "Dataset",
-            "Version",
-            "Model",
-            "Main Metric",
-            "Date"
+            "ID эксперимента",
+            "Датасет",
+            "Версия",
+            "Модель",
+            "Главная метрика",
+            "Дата"
         ])
 
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -130,7 +130,7 @@ class ExperimentsPage(QWidget):
     # ---------------------------------------------------------
 
     def _create_details_panel(self):
-        box = QGroupBox("Experiment Details")
+        box = QGroupBox("Детали эксперимента")
         layout = QVBoxLayout(box)
 
         self.details_text = QTextEdit()
@@ -139,11 +139,11 @@ class ExperimentsPage(QWidget):
         # Button container
         buttons_layout = QHBoxLayout()
         
-        self.export_model_button = QPushButton("Export Model")
+        self.export_model_button = QPushButton("Экспорт модели")
         self.export_model_button.clicked.connect(self._on_export_model_clicked)
         buttons_layout.addWidget(self.export_model_button)
         
-        self.delete_button = QPushButton("Delete Experiment")
+        self.delete_button = QPushButton("Удалить эксперимент")
         self.delete_button.clicked.connect(self._on_delete_experiment_clicked)
         buttons_layout.addWidget(self.delete_button)
         
@@ -170,7 +170,7 @@ class ExperimentsPage(QWidget):
             self.dataset_filter.currentTextChanged.connect(self._on_filter_changed)
             self.model_filter.currentTextChanged.connect(self._on_filter_changed)
         except Exception as e:
-            QMessageBox.warning(self, "Error", f"Failed to load experiments: {str(e)}")
+            QMessageBox.warning(self, "Ошибка", f"Не удалось загрузить эксперименты: {str(e)}")
 
     def _populate_filters(self, experiments: dict):
         """Populate filter dropdowns with unique values."""
@@ -204,16 +204,16 @@ class ExperimentsPage(QWidget):
         model_type = self.model_filter.currentText()
 
         filters = {}
-        if dataset_name != "All":
+        if dataset_name != "Все":
             filters["dataset_name"] = dataset_name
-        if model_type != "All":
+        if model_type != "Все":
             filters["model_type"] = model_type
 
         try:
             experiments = self.experiment_manager.list_experiments(**filters)
             self._display_experiments(experiments)
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to refresh experiments: {str(e)}")
+            QMessageBox.critical(self, "Ошибка", f"Не удалось обновить эксперименты: {str(e)}")
     
     def _reload_all_experiments(self):
         """Reload all experiments and update filters."""
@@ -242,19 +242,19 @@ class ExperimentsPage(QWidget):
             # Check current items
             current_items = set(self.dataset_filter.itemText(i) for i in range(self.dataset_filter.count()))
             
-            # If there are any items, remove the "All" marker for comparison
-            if "All" in current_items:
-                current_items.discard("All")
+            # If there are any items, remove the "Все" marker for comparison
+            if "Все" in current_items:
+                current_items.discard("Все")
             
             if available_datasets != current_items:
                 # Rebuild the filter combo
                 selected_index = self.dataset_filter.currentIndex()
                 self.dataset_filter.clear()
-                self.dataset_filter.addItem("All")
+                self.dataset_filter.addItem("Все")
                 self.dataset_filter.addItems(sorted(available_datasets))
                 
                 # Try to restore selection
-                if current_filter and current_filter != "All":
+                if current_filter and current_filter != "Все":
                     index = self.dataset_filter.findText(current_filter)
                     if index >= 0:
                         self.dataset_filter.setCurrentIndex(index)
@@ -310,7 +310,7 @@ class ExperimentsPage(QWidget):
                 )
                 self._show_experiment_details()
             except Exception as e:
-                QMessageBox.critical(self, "Error", f"Failed to load experiment: {str(e)}")
+                QMessageBox.critical(self, "Ошибка", f"Не удалось загрузить эксперимент: {str(e)}")
 
     def _show_experiment_details(self):
         """Display detailed information about selected experiment."""
@@ -320,28 +320,28 @@ class ExperimentsPage(QWidget):
         lines = []
         data = self.current_experiment_data
         
-        lines.append(f"Experiment ID: {data.get('experiment_id', '')}")
-        lines.append(f"Timestamp: {data.get('timestamp', '')}")
+        lines.append(f"ID эксперимента: {data.get('experiment_id', '')}")
+        lines.append(f"Время: {data.get('timestamp', '')}")
         lines.append("")
         
         # Dataset info
         dataset = data.get("dataset", {})
-        lines.append("=== Dataset ===")
-        lines.append(f"Name: {dataset.get('name', '')}")
-        lines.append(f"Version: {dataset.get('version', '')}")
+        lines.append("=== Датасет ===")
+        lines.append(f"Название: {dataset.get('name', '')}")
+        lines.append(f"Версия: {dataset.get('version', '')}")
         lines.append("")
         
         # Model info
         model = data.get("model", {})
-        lines.append("=== Model ===")
-        lines.append(f"Type: {model.get('type', '')}")
-        lines.append("Hyperparameters:")
+        lines.append("=== Модель ===")
+        lines.append(f"Тип: {model.get('type', '')}")
+        lines.append("Гиперпараметры:")
         for key, value in model.get("hyperparameters", {}).items():
             lines.append(f"  {key}: {value}")
         lines.append("")
         
         # Metrics
-        lines.append("=== Metrics ===")
+        lines.append("=== Метрики ===")
         for key, value in data.get("metrics", {}).items():
             if isinstance(value, float):
                 lines.append(f"{key}: {value:.4f}")
@@ -351,7 +351,7 @@ class ExperimentsPage(QWidget):
         # Notes
         if data.get("notes"):
             lines.append("")
-            lines.append("=== Notes ===")
+            lines.append("=== Заметки ===")
             lines.append(data.get("notes", ""))
 
         self.details_text.setText("\n".join(lines))
@@ -363,7 +363,7 @@ class ExperimentsPage(QWidget):
     def _on_export_model_clicked(self):
         """Handle export model button click."""
         if not self.current_experiment_id:
-            QMessageBox.warning(self, "Warning", "Please select an experiment first.")
+            QMessageBox.warning(self, "Предупреждение", "Сначала выберите эксперимент.")
             return
 
         try:
@@ -373,9 +373,9 @@ class ExperimentsPage(QWidget):
             except FileNotFoundError:
                 QMessageBox.warning(
                     self,
-                    "Warning",
-                    f"No saved model found for this experiment.\n"
-                    f"Experiment ID: {self.current_experiment_id}"
+                    "Предупреждение",
+                    f"Для этого эксперимента нет сохранённой модели.\n"
+                    f"ID эксперимента: {self.current_experiment_id}"
                 )
                 return
 
@@ -386,9 +386,9 @@ class ExperimentsPage(QWidget):
             # Show save dialog
             file_path, _ = QFileDialog.getSaveFileName(
                 self,
-                "Export Model",
+                "Экспорт модели",
                 f"{dataset_name}_{model_type}_model",
-                "Pickle files (*.pkl);;Joblib files (*.joblib)"
+                "Pickle-файлы (*.pkl);;Joblib-файлы (*.joblib)"
             )
 
             if not file_path:
@@ -405,30 +405,30 @@ class ExperimentsPage(QWidget):
                 
                 QMessageBox.information(
                     self,
-                    "Success",
-                    f"Model exported successfully to:\n{file_path}"
+                    "Успех",
+                    f"Модель успешно экспортирована в:\n{file_path}"
                 )
             except Exception as e:
                 QMessageBox.critical(
                     self,
-                    "Export Error",
-                    f"Failed to export model:\n\n{str(e)}"
+                    "Ошибка экспорта",
+                    f"Не удалось экспортировать модель:\n\n{str(e)}"
                 )
         
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Export failed: {str(e)}")
+            QMessageBox.critical(self, "Ошибка", f"Ошибка экспорта: {str(e)}")
     
     def _on_delete_experiment_clicked(self):
         """Handle delete experiment button click."""
         if not self.current_experiment_id:
-            QMessageBox.warning(self, "Warning", "Please select an experiment first.")
+            QMessageBox.warning(self, "Предупреждение", "Сначала выберите эксперимент.")
             return
         
         # Confirm deletion
         reply = QMessageBox.question(
             self,
-            "Confirm Delete",
-            f"Are you sure you want to delete this experiment?\n\nExperiment ID: {self.current_experiment_id}",
+            "Подтвердите удаление",
+            f"Удалить этот эксперимент?\n\nID эксперимента: {self.current_experiment_id}",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
@@ -443,8 +443,8 @@ class ExperimentsPage(QWidget):
             if success:
                 QMessageBox.information(
                     self,
-                    "Success",
-                    "Experiment deleted successfully!"
+                    "Успех",
+                    "Эксперимент успешно удалён!"
                 )
                 
                 # Clear current experiment info
@@ -457,12 +457,12 @@ class ExperimentsPage(QWidget):
             else:
                 QMessageBox.warning(
                     self,
-                    "Error",
-                    "Failed to delete experiment."
+                    "Ошибка",
+                    "Не удалось удалить эксперимент."
                 )
         except Exception as e:
             QMessageBox.critical(
                 self,
-                "Error",
-                f"Failed to delete experiment:\n\n{str(e)}"
+                "Ошибка",
+                f"Не удалось удалить эксперимент:\n\n{str(e)}"
             )

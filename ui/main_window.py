@@ -70,11 +70,11 @@ class MainWindow(QMainWindow):
         layout.setSpacing(8)
 
         # Navigation buttons
-        self.datasets_btn = QPushButton("Datasets")
-        self.experiments_btn = QPushButton("Experiments")
-        self.ml_lab_btn = QPushButton("ML Lab")
+        self.datasets_btn = QPushButton("Датасеты")
+        self.experiments_btn = QPushButton("Эксперименты")
+        self.ml_lab_btn = QPushButton("ML Лаб")
 
-        for btn in [self.datasets_btn, self.experiments_btn, self.ml_lab_btn]:
+        for btn in [self.datasets_btn, self.ml_lab_btn, self.experiments_btn]:
             btn.setFixedHeight(32)
             btn.setStyleSheet("""
                 QPushButton {

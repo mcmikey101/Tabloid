@@ -79,7 +79,7 @@ def _create_model(
                 **model_kwargs,
             )
 
-    raise ValueError("Unsupported model_type or task_type.")
+    raise ValueError("Неподдерживаемый model_type или task_type.")
 
 
 # ----------------------------------------------------------------------
@@ -97,7 +97,7 @@ def train_model(
 ):
 
     if target_column not in df.columns:
-        raise ValueError(f"Target column '{target_column}' not found.")
+        raise ValueError(f"Целевой столбец '{target_column}' не найден.")
 
     X = df.drop(columns=[target_column])
     y = df[target_column]
@@ -192,7 +192,7 @@ def apply_clustering(
             **cluster_kwargs)
 
     else:
-        raise ValueError("Unsupported clustering method.")
+        raise ValueError("Неподдерживаемый метод кластеризации.")
     labels = model.fit_predict(df)
     result_df = df.copy()
     result_df["cluster"] = labels

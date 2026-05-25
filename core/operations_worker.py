@@ -77,7 +77,7 @@ def apply_single_operation(
             n_components=config.get("n_components", 2),
         )
     else:
-        raise ValueError(f"Unknown operation: {operation_id}")
+        raise ValueError(f"Неизвестная операция: {operation_id}")
 
 
 def run_preview_operations(

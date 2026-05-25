@@ -55,7 +55,7 @@ def handle_missing_values(
             elif strategy == "mode":
                 value = df_copy[col].mode().iloc[0] if not df_copy[col].mode().empty else None
             else:
-                raise ValueError("Unsupported missing value strategy.")
+                raise ValueError("Неподдерживаемая стратегия обработки пропусков.")
 
             df_copy[col] = df_copy[col].fillna(value)
 
@@ -165,11 +165,11 @@ def standard_scale(
     existing_columns = [col for col in columns if col in df_copy.columns]
     
     if not existing_columns:
-        raise ValueError(f"None of the specified columns {columns} exist in the dataframe.")
+        raise ValueError(f"Ни один из указанных столбцов {columns} не найден в датафрейме.")
     
     if len(existing_columns) < len(columns):
         missing = [col for col in columns if col not in df_copy.columns]
-        print(f"Warning: Columns {missing} not found in dataframe. Scaling only existing columns.")
+        print(f"Предупреждение: столбцы {missing} не найдены в датафрейме. Масштабируются только существующие столбцы.")
     
     scaler = StandardScaler()
     df_copy[existing_columns] = scaler.fit_transform(df_copy[existing_columns])
@@ -196,11 +196,11 @@ def minmax_scale(
     existing_columns = [col for col in columns if col in df_copy.columns]
     
     if not existing_columns:
-        raise ValueError(f"None of the specified columns {columns} exist in the dataframe.")
+        raise ValueError(f"Ни один из указанных столбцов {columns} не найден в датафрейме.")
     
     if len(existing_columns) < len(columns):
         missing = [col for col in columns if col not in df_copy.columns]
-        print(f"Warning: Columns {missing} not found in dataframe. Scaling only existing columns.")
+        print(f"Предупреждение: столбцы {missing} не найдены в датафрейме. Масштабируются только существующие столбцы.")
     
     scaler = MinMaxScaler()
     df_copy[existing_columns] = scaler.fit_transform(df_copy[existing_columns])
@@ -252,7 +252,7 @@ def encode_classes(
     """
 
     if column not in df.columns:
-        raise ValueError(f"Column '{column}' not found.")
+        raise ValueError(f"Столбец '{column}' не найден.")
 
     df_copy = df.copy()
 
@@ -301,21 +301,21 @@ def reduce_dimensionality(
     existing_columns = [col for col in columns if col in df_copy.columns]
     
     if not existing_columns:
-        raise ValueError(f"None of the specified columns {columns} exist in the dataframe.")
+        raise ValueError(f"Ни один из указанных столбцов {columns} не найден в датафрейме.")
     
     # Select only numerical data
     numerical_cols = df_copy[existing_columns].select_dtypes(include=[np.number]).columns.tolist()
     
     if not numerical_cols:
-        raise ValueError(f"None of the selected columns {existing_columns} contain numerical data.")
+        raise ValueError(f"Ни один из выбранных столбцов {existing_columns} не содержит числовых данных.")
     
     if len(numerical_cols) < n_components:
         raise ValueError(
-            f"Number of components ({n_components}) cannot exceed number of features ({len(numerical_cols)})."
+            f"Количество компонент ({n_components}) не может превышать число признаков ({len(numerical_cols)})."
         )
     
     if n_components < 1:
-        raise ValueError("n_components must be at least 1.")
+        raise ValueError("n_components должно быть не меньше 1.")
     
     # Prepare data for dimensionality reduction
     X = df_copy[numerical_cols].values
@@ -331,12 +331,12 @@ def reduce_dimensionality(
         explained_variance = None
     elif method.lower() == "umap":
         if not HAS_UMAP:
-            raise RuntimeError("UMAP is not installed. Install it with: pip install umap-learn")
+            raise RuntimeError("UMAP не установлен. Установите его командой: pip install umap-learn")
         reducer = umap.UMAP(n_components=n_components, random_state=42)
         reduced = reducer.fit_transform(X)
         explained_variance = None
     else:
-        raise ValueError(f"Unknown dimensionality reduction method: {method}")
+        raise ValueError(f"Неизвестный метод снижения размерности: {method}")
     
     # Create new column names for reduced dimensions
     prefix = method.lower()

@@ -18,7 +18,7 @@ class ComparisonPlotsDialog(QDialog):
     
     def __init__(self, version_manager, file_store, dataset_name: str, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Compare Plots")
+        self.setWindowTitle("Сравнить графики")
         self.setModal(True)
         # Responsive sizing: use 80% of screen or min 900x600
         screen_geometry = self.screen().geometry()
@@ -55,7 +55,7 @@ class ComparisonPlotsDialog(QDialog):
         self.version1_combo = QComboBox()
         self.version1_combo.currentTextChanged.connect(self._on_version1_changed)
         self.version1_combo.setMaximumWidth(200)
-        col1_label = QLabel("Col1:")
+        col1_label = QLabel("Кол1:")
         col1_label.setStyleSheet("color: #e0e0e0;")
         self.col1_combo = QComboBox()
         self.col1_combo.setMaximumWidth(200)
@@ -74,7 +74,7 @@ class ComparisonPlotsDialog(QDialog):
         self.version2_combo = QComboBox()
         self.version2_combo.currentTextChanged.connect(self._on_version2_changed)
         self.version2_combo.setMaximumWidth(200)
-        col2_label = QLabel("Col2:")
+        col2_label = QLabel("Кол2:")
         col2_label.setStyleSheet("color: #e0e0e0;")
         self.col2_combo = QComboBox()
         self.col2_combo.setMaximumWidth(200)
@@ -88,12 +88,12 @@ class ComparisonPlotsDialog(QDialog):
         # Third row: Plot Type and Scatter option
         row3_layout = QHBoxLayout()
         row3_layout.setSpacing(4)
-        plot_type_label = QLabel("Type:")
+        plot_type_label = QLabel("Тип:")
         plot_type_label.setStyleSheet("color: #e0e0e0;")
         self.plot_type_combo = QComboBox()
-        self.plot_type_combo.addItems(["Histogram", "Box Plot", "Violin Plot", "KDE Plot"])
+        self.plot_type_combo.addItems(["Гистограмма", "Диаграмма размаха", "Скрипичная диаграмма", "KDE диаграмма"])
         self.plot_type_combo.setMaximumWidth(150)
-        self.scatter_checkbox = QCheckBox("Scatter")
+        self.scatter_checkbox = QCheckBox("Точечный")
         self.scatter_checkbox.setStyleSheet("color: #e0e0e0;")
         self.scatter_checkbox.stateChanged.connect(self._on_scatter_option_changed)
         row3_layout.addWidget(plot_type_label)
@@ -108,7 +108,7 @@ class ComparisonPlotsDialog(QDialog):
         scatter_cols_layout.setSpacing(3)
         
         # Version 1 scatter controls
-        self.scatter1_select_btn = QPushButton("V1 Select")
+        self.scatter1_select_btn = QPushButton("Выбор V1")
         self.scatter1_select_btn.setStyleSheet("background-color: #5b7cfa; color: white; border: none; padding: 2px 6px; border-radius: 3px; font-size: 9px;")
         self.scatter1_select_btn.setMaximumWidth(80)
         self.scatter1_select_btn.clicked.connect(self._show_scatter1_column_selection)
@@ -117,7 +117,7 @@ class ComparisonPlotsDialog(QDialog):
         self.scatter1_cols_label.setMaximumWidth(80)
         
         self.color_combo_v1 = QComboBox()
-        self.color_combo_v1.addItem("None")
+        self.color_combo_v1.addItem("Нет")
         self.color_combo_v1.currentTextChanged.connect(self._on_color_v1_changed)
         self.color_combo_v1.setMaximumWidth(100)
         
@@ -127,7 +127,7 @@ class ComparisonPlotsDialog(QDialog):
         scatter_cols_layout.addSpacing(8)
         
         # Version 2 scatter controls
-        self.scatter2_select_btn = QPushButton("V2 Select")
+        self.scatter2_select_btn = QPushButton("Выбор V2")
         self.scatter2_select_btn.setStyleSheet("background-color: #5b7cfa; color: white; border: none; padding: 2px 6px; border-radius: 3px; font-size: 9px;")
         self.scatter2_select_btn.setMaximumWidth(80)
         self.scatter2_select_btn.clicked.connect(self._show_scatter2_column_selection)
@@ -136,7 +136,7 @@ class ComparisonPlotsDialog(QDialog):
         self.scatter2_cols_label.setMaximumWidth(80)
         
         self.color_combo_v2 = QComboBox()
-        self.color_combo_v2.addItem("None")
+        self.color_combo_v2.addItem("Нет")
         self.color_combo_v2.currentTextChanged.connect(self._on_color_v2_changed)
         self.color_combo_v2.setMaximumWidth(100)
         
@@ -162,7 +162,7 @@ class ComparisonPlotsDialog(QDialog):
         button_layout.setSpacing(3)
         button_layout.setContentsMargins(0, 4, 0, 0)
         
-        refresh_btn = QPushButton("Refresh")
+        refresh_btn = QPushButton("Обновить")
         refresh_btn.setStyleSheet("""
             QPushButton {
                 background-color: #5b7cfa;
@@ -180,7 +180,7 @@ class ComparisonPlotsDialog(QDialog):
         refresh_btn.setMaximumWidth(80)
         refresh_btn.clicked.connect(self._refresh_plot)
         
-        export_btn = QPushButton("Export")
+        export_btn = QPushButton("Экспорт")
         export_btn.setStyleSheet("""
             QPushButton {
                 background-color: #51cf66;
@@ -198,7 +198,7 @@ class ComparisonPlotsDialog(QDialog):
         export_btn.setMaximumWidth(80)
         export_btn.clicked.connect(self._export_plot)
         
-        close_btn = QPushButton("Close")
+        close_btn = QPushButton("Закрыть")
         close_btn.setStyleSheet("""
             QPushButton {
                 background-color: #868e96;
@@ -245,7 +245,7 @@ class ComparisonPlotsDialog(QDialog):
             self._on_version1_changed()
             self._on_version2_changed()
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to load versions: {str(e)}")
+            QMessageBox.critical(self, "Ошибка", f"Не удалось загрузить версию: {str(e)}")
     
     def _on_version1_changed(self):
         """Handle version 1 change."""
@@ -259,7 +259,7 @@ class ComparisonPlotsDialog(QDialog):
             self._populate_col1_options()
             self._refresh_plot()
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to load version: {str(e)}")
+            QMessageBox.critical(self, "Ошибка", f"Не удалось загрузить версию: {str(e)}")
     
     def _on_version2_changed(self):
         """Handle version 2 change."""
@@ -273,7 +273,7 @@ class ComparisonPlotsDialog(QDialog):
             self._populate_col2_options()
             self._refresh_plot()
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to load version: {str(e)}")
+            QMessageBox.critical(self, "Ошибка", f"Не удалось загрузить версию: {str(e)}")
     
     def _populate_col1_options(self):
         """Populate column 1 options from version 1."""
@@ -319,7 +319,7 @@ class ComparisonPlotsDialog(QDialog):
         self.color_combo_v1.blockSignals(True)
         current_text_v1 = self.color_combo_v1.currentText()
         self.color_combo_v1.clear()
-        self.color_combo_v1.addItem("None")
+        self.color_combo_v1.addItem("Нет")
         
         if self.df1 is not None:
             categorical_cols = []
@@ -338,7 +338,7 @@ class ComparisonPlotsDialog(QDialog):
                 self.color_combo_v1.addItem(col)
             
             # Try to restore previous selection
-            if current_text_v1 and current_text_v1 != "None" and self.color_combo_v1.findText(current_text_v1) >= 0:
+            if current_text_v1 and current_text_v1 != "Нет" and self.color_combo_v1.findText(current_text_v1) >= 0:
                 self.color_combo_v1.setCurrentText(current_text_v1)
         
         self.color_combo_v1.blockSignals(False)
@@ -347,7 +347,7 @@ class ComparisonPlotsDialog(QDialog):
         self.color_combo_v2.blockSignals(True)
         current_text_v2 = self.color_combo_v2.currentText()
         self.color_combo_v2.clear()
-        self.color_combo_v2.addItem("None")
+        self.color_combo_v2.addItem("Нет")
         
         if self.df2 is not None:
             categorical_cols = []
@@ -366,7 +366,7 @@ class ComparisonPlotsDialog(QDialog):
                 self.color_combo_v2.addItem(col)
             
             # Try to restore previous selection
-            if current_text_v2 and current_text_v2 != "None" and self.color_combo_v2.findText(current_text_v2) >= 0:
+            if current_text_v2 and current_text_v2 != "Нет" and self.color_combo_v2.findText(current_text_v2) >= 0:
                 self.color_combo_v2.setCurrentText(current_text_v2)
         
         self.color_combo_v2.blockSignals(False)
@@ -374,7 +374,7 @@ class ComparisonPlotsDialog(QDialog):
     def _on_color_v1_changed(self):
         """Handle color column change for Version 1."""
         self.color_col_v1 = self.color_combo_v1.currentText()
-        if self.color_col_v1 == "None":
+        if self.color_col_v1 == "Нет":
             self.color_col_v1 = None
         if self.scatter_checkbox.isChecked():
             self._refresh_plot()
@@ -382,7 +382,7 @@ class ComparisonPlotsDialog(QDialog):
     def _on_color_v2_changed(self):
         """Handle color column change for Version 2."""
         self.color_col_v2 = self.color_combo_v2.currentText()
-        if self.color_col_v2 == "None":
+        if self.color_col_v2 == "Нет":
             self.color_col_v2 = None
         if self.scatter_checkbox.isChecked():
             self._refresh_plot()
@@ -416,7 +416,7 @@ class ComparisonPlotsDialog(QDialog):
             
             self.canvas.draw()
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to create plot: {str(e)}")
+            QMessageBox.critical(self, "Ошибка", f"Не удалось построить диаграмму: {str(e)}")
     
     def _plot_side_by_side(self, col1: str, col2: str, plot_type: str):
         """Create side-by-side plots from two versions."""
@@ -434,13 +434,13 @@ class ComparisonPlotsDialog(QDialog):
         version1 = self.version1_combo.currentText()
         
         if not data1.empty:
-            if plot_type == "Histogram":
+            if plot_type == "Гистограмма":
                 ax1.hist(data1, bins=30, color='#5b7cfa', edgecolor='white', alpha=0.7)
-            elif plot_type == "Box Plot":
+            elif plot_type == "Диаграмма размаха":
                 ax1.boxplot(data1, vert=True)
-            elif plot_type == "Violin Plot":
+            elif plot_type == "Скрипичная диаграмма":
                 sns.violinplot(y=data1, ax=ax1, color='#5b7cfa')
-            elif plot_type == "KDE Plot":
+            elif plot_type == "KDE диаграмма":
                 data1.plot(kind='kde', ax=ax1, color='#5b7cfa', linewidth=2)
         
         ax1.set_title(f"{col1}\n({version1})", color='#333333', fontsize=12, fontweight='bold')
@@ -457,13 +457,13 @@ class ComparisonPlotsDialog(QDialog):
         version2 = self.version2_combo.currentText()
         
         if not data2.empty:
-            if plot_type == "Histogram":
+            if plot_type == "Гистограмма":
                 ax2.hist(data2, bins=30, color='#ff6b6b', edgecolor='white', alpha=0.7)
-            elif plot_type == "Box Plot":
+            elif plot_type == "Диаграмма размаха":
                 ax2.boxplot(data2, vert=True)
-            elif plot_type == "Violin Plot":
+            elif plot_type == "Скрипичная диаграмма":
                 sns.violinplot(y=data2, ax=ax2, color='#ff6b6b')
-            elif plot_type == "KDE Plot":
+            elif plot_type == "KDE диаграмма":
                 data2.plot(kind='kde', ax=ax2, color='#ff6b6b', linewidth=2)
         
         ax2.set_title(f"{col2}\n({version2})", color='#333333', fontsize=12, fontweight='bold')
@@ -507,9 +507,9 @@ class ComparisonPlotsDialog(QDialog):
         cols_available = [c for c in cols if c in df.columns]
         
         if len(cols_available) < 2:
-            ax.text(0.5, 0.5, 'Insufficient columns selected',
+            ax.text(0.5, 0.5, 'Недостаточно колонн выбрано',
                    ha='center', va='center', color='#666666', transform=ax.transAxes)
-            ax.set_title(f"Version: {version_name}", color='#333333', fontsize=12, fontweight='bold')
+            ax.set_title(f"Версия: {version_name}", color='#333333', fontsize=12, fontweight='bold')
             return
         
         x_col, y_col = cols_available[0], cols_available[1]
@@ -534,7 +534,7 @@ class ComparisonPlotsDialog(QDialog):
         
         ax.set_xlabel(x_col, color='#333333')
         ax.set_ylabel(y_col, color='#333333')
-        ax.set_title(f"Version: {version_name}", color='#333333', fontsize=12, fontweight='bold')
+        ax.set_title(f"Версия: {version_name}", color='#333333', fontsize=12, fontweight='bold')
     
     def _scatter_with_coloring(self, ax, x, y, c):
         """Create scatter plot with intelligent coloring based on data type."""
@@ -565,30 +565,30 @@ class ComparisonPlotsDialog(QDialog):
     def _show_scatter1_column_selection(self):
         """Show column selection dialog for version 1 scatter plot."""
         if self.df1 is None:
-            QMessageBox.warning(self, "Warning", "Version 1 data not loaded.")
+            QMessageBox.warning(self, "Предупреждение", "Данные версии 1 не загружены.")
             return
         
         all_cols = self.df1.columns.tolist()
-        self._show_column_selection_dialog("Version 1", all_cols, "scatter1")
+        self._show_column_selection_dialog("Версия 1", all_cols, "scatter1")
     
     def _show_scatter2_column_selection(self):
         """Show column selection dialog for version 2 scatter plot."""
         if self.df2 is None:
-            QMessageBox.warning(self, "Warning", "Version 2 data not loaded.")
+            QMessageBox.warning(self, "Предупреждение", "Данные версии 2 не загружены.")
             return
         
         all_cols = self.df2.columns.tolist()
-        self._show_column_selection_dialog("Version 2", all_cols, "scatter2")
+        self._show_column_selection_dialog("Версия 2", all_cols, "scatter2")
     
     def _show_column_selection_dialog(self, version_label: str, columns: list, target: str):
         """Show dialog to select columns for scatter plot."""
         dialog = QDialog(self)
-        dialog.setWindowTitle(f"Select Columns - {version_label}")
+        dialog.setWindowTitle(f"Выберите колонны - {version_label}")
         dialog.resize(400, 400)
         
         layout = QVBoxLayout(dialog)
         
-        label = QLabel(f"Select 2-3 columns for {version_label}:\n(Uncheck to exclude a column)")
+        label = QLabel(f"Выберите 2-3 колонны для {version_label}")
         layout.addWidget(label)
         
         list_widget = QListWidget()
@@ -608,7 +608,7 @@ class ComparisonPlotsDialog(QDialog):
         
         button_layout = QHBoxLayout()
         ok_btn = QPushButton("OK")
-        cancel_btn = QPushButton("Cancel")
+        cancel_btn = QPushButton("Отмена")
         
         def on_ok():
             selected = []
@@ -618,11 +618,11 @@ class ComparisonPlotsDialog(QDialog):
                     selected.append(item.text())
             
             if len(selected) < 2:
-                QMessageBox.warning(self, "Warning", "Please select at least 2 columns.")
+                QMessageBox.warning(self, "Предупреждение", "Пожалуйста выберите 2-3 колонны")
                 return
             
             if len(selected) > 3:
-                QMessageBox.warning(self, "Warning", "Please select at most 3 columns.")
+                QMessageBox.warning(self, "Предупреждение", "Пожалуйста выберите 2-3 колонны")
                 return
             
             if target == "scatter1":
@@ -648,9 +648,9 @@ class ComparisonPlotsDialog(QDialog):
         """Export the current plot as an image."""
         file_path, _ = QFileDialog.getSaveFileName(
             self,
-            "Export Plot",
+            "Экспорт графика",
             "comparison_plot",
-            "PNG files (*.png);;JPG files (*.jpg);;PDF files (*.pdf)"
+            "PNG-файлы (*.png);;JPG-файлы (*.jpg);;PDF-файлы (*.pdf)"
         )
         
         if not file_path:
@@ -658,6 +658,6 @@ class ComparisonPlotsDialog(QDialog):
         
         try:
             self.figure.savefig(file_path, facecolor='#262738', edgecolor='#3a3d4a', dpi=150)
-            QMessageBox.information(self, "Success", f"Plot exported successfully to {file_path}")
+            QMessageBox.information(self, "Успех", f"График успешно экспортирован в {file_path}")
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to export plot: {str(e)}")
+            QMessageBox.critical(self, "Ошибка", f"Не удалось экспортировать график: {str(e)}")

@@ -24,7 +24,7 @@ def setup_fonts():
         # Fallback is handled in the stylesheet
         pass
     except Exception as e:
-        print(f"Note: Could not load custom fonts: {e}")
+        print(f"Примечание: не удалось загрузить пользовательские шрифты: {e}")
 
 
 def main():

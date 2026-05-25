@@ -28,16 +28,16 @@ class VersionTreeWidget(QWidget):
     def _build_ui(self):
         layout = QVBoxLayout(self)
 
-        label = QLabel("Versions")
+        label = QLabel("Версии")
         layout.addWidget(label)
 
         controls_layout = QHBoxLayout()
 
-        search_label = QLabel("Search:")
+        search_label = QLabel("Поиск:")
         search_label.setStyleSheet("color: #e0e0e0; font-size: 10px;")
 
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("Filter versions...")
+        self.search_input.setPlaceholderText("Фильтр версий...")
         self.search_input.setStyleSheet("""
             QLineEdit {
                 background-color: #2b2d42;
@@ -52,7 +52,7 @@ class VersionTreeWidget(QWidget):
         controls_layout.addWidget(search_label)
         controls_layout.addWidget(self.search_input, 1)
 
-        operation_label = QLabel("Operation:")
+        operation_label = QLabel("Операция:")
         operation_label.setStyleSheet("color: #e0e0e0; font-size: 10px;")
 
         self.operation_filter = QComboBox()
@@ -72,14 +72,14 @@ class VersionTreeWidget(QWidget):
         controls_layout.addWidget(operation_label)
         controls_layout.addWidget(self.operation_filter, 1)
 
-        sort_label = QLabel("Sort:")
+        sort_label = QLabel("Сортировка:")
         sort_label.setStyleSheet("color: #e0e0e0; font-size: 10px;")
 
         self.sort_option = QComboBox()
         self.sort_option.addItems([
-            "Hierarchical",
-            "By Time Created (Newest First)",
-            "By Time Created (Oldest First)"
+            "Иерархически",
+            "По времени создания (сначала новые)",
+            "По времени создания (сначала старые)"
         ])
         self.sort_option.setStyleSheet("""
             QComboBox {
@@ -133,25 +133,25 @@ class VersionTreeWidget(QWidget):
                 except Exception:
                     self.metadata[version] = {
                         "parent": version_graph[version],
-                        "operation": "unknown",
+                        "operation": "неизвестно",
                         "timestamp": "",
                         "config": {}
                     }
-                    self.all_operations.add("unknown")
+                    self.all_operations.add("неизвестно")
         else:
             for version, parent in version_graph.items():
                 self.metadata[version] = {
                     "parent": parent,
-                    "operation": "unknown",
+                    "operation": "неизвестно",
                     "timestamp": "",
                     "config": {}
                 }
-                self.all_operations.add("unknown")
+                self.all_operations.add("неизвестно")
 
         self.operation_filter.blockSignals(True)
         current_operation = self.operation_filter.currentText()
         self.operation_filter.clear()
-        self.operation_filter.addItem("All Operations")
+        self.operation_filter.addItem("Все операции")
         self.operation_filter.addItems(sorted(self.all_operations))
 
         index = self.operation_filter.findText(current_operation)
@@ -174,14 +174,14 @@ class VersionTreeWidget(QWidget):
             if search_text and search_text not in version.lower():
                 continue
 
-            if selected_operation != "All Operations":
+            if selected_operation != "Все операции":
                 meta = self.metadata.get(version, {})
                 if meta.get("operation") != selected_operation:
                     continue
 
             filtered_versions.add(version)
 
-        if sort_mode == "Hierarchical":
+        if sort_mode == "Иерархически":
             self._build_hierarchical_tree(filtered_versions)
         else:
             self._build_flat_sorted_tree(filtered_versions, sort_mode)
@@ -204,7 +204,7 @@ class VersionTreeWidget(QWidget):
                 return
 
             meta = self.metadata.get(version, {})
-            operation = meta.get("operation", "unknown")
+            operation = meta.get("operation", "неизвестно")
             display_text = f"{version} ({operation})"
 
             item = QTreeWidgetItem([display_text])
@@ -236,14 +236,14 @@ class VersionTreeWidget(QWidget):
 
             versions_with_timestamp.append((version, timestamp))
 
-        if sort_mode == "By Time Created (Newest First)":
+        if sort_mode == "По времени создания (сначала новые)":
             versions_with_timestamp.sort(key=lambda x: x[1], reverse=True)
         else:
             versions_with_timestamp.sort(key=lambda x: x[1])
 
         for version, _ in versions_with_timestamp:
             meta = self.metadata.get(version, {})
-            operation = meta.get("operation", "unknown")
+            operation = meta.get("operation", "неизвестно")
             timestamp_display = meta.get("timestamp", "")
 
             if timestamp_display:

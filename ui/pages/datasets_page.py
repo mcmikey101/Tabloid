@@ -82,8 +82,8 @@ class DatasetsPage(QWidget):
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(8)
 
-        self.dataset_label = QLabel("Dataset: None")
-        self.version_label = QLabel("Version: None")
+        self.dataset_label = QLabel("Датасет: нет")
+        self.version_label = QLabel("Версия: нет")
         self.dataset_label.setMaximumWidth(300)
         self.version_label.setMaximumWidth(300)
 
@@ -102,7 +102,7 @@ class DatasetsPage(QWidget):
         layout.addStretch()
 
         # ===== PRIMARY ACTION BUTTONS =====
-        self.operations_btn = QPushButton("Preprocess")
+        self.operations_btn = QPushButton("Предобработка")
         self.operations_btn.setStyleSheet("""
             QPushButton {
                 background-color: #5b7cfa;
@@ -117,7 +117,7 @@ class DatasetsPage(QWidget):
             }
         """)
         
-        self.train_model_btn = QPushButton("Train Model")
+        self.train_model_btn = QPushButton("Обучить модель")
         self.train_model_btn.setStyleSheet("""
             QPushButton {
                 background-color: #5b7cfa;
@@ -141,7 +141,7 @@ class DatasetsPage(QWidget):
         layout.addWidget(separator1)
         
         # ===== SECONDARY ACTION BUTTONS =====
-        self.synthesize_btn = QPushButton("Synthesize")
+        self.synthesize_btn = QPushButton("Синтез")
         self.synthesize_btn.setStyleSheet("""
             QPushButton {
                 background-color: #3a3d4a;
@@ -156,7 +156,7 @@ class DatasetsPage(QWidget):
             }
         """)
         
-        self.export_btn = QPushButton("Export")
+        self.export_btn = QPushButton("Экспорт")
         self.export_btn.setStyleSheet("""
             QPushButton {
                 background-color: #3a3d4a;
@@ -171,7 +171,7 @@ class DatasetsPage(QWidget):
             }
         """)
         
-        self.compare_plots_btn = QPushButton("Compare")
+        self.compare_plots_btn = QPushButton("Сравнить")
         self.compare_plots_btn.setStyleSheet("""
             QPushButton {
                 background-color: #3a3d4a;
@@ -229,7 +229,7 @@ class DatasetsPage(QWidget):
         self.dataset_list = DatasetListWidget()
         layout.addWidget(self.dataset_list)
 
-        self.delete_dataset_btn = QPushButton("Delete Dataset")
+        self.delete_dataset_btn = QPushButton("Удалить датасет")
         layout.addWidget(self.delete_dataset_btn)
 
         return container
@@ -242,7 +242,7 @@ class DatasetsPage(QWidget):
         self.version_tree = VersionTreeWidget()
         layout.addWidget(self.version_tree)
 
-        self.delete_version_btn = QPushButton("Delete Version")
+        self.delete_version_btn = QPushButton("Удалить версию")
         layout.addWidget(self.delete_version_btn)
 
         return container
@@ -274,8 +274,8 @@ class DatasetsPage(QWidget):
         formats = ["CSV", "Excel", "Parquet", "JSON"]
         format_choice, ok = QInputDialog.getItem(
             self,
-            "Export Format",
-            "Select export format:",
+            "Формат экспорта",
+            "Выберите формат экспорта:",
             formats,
             0,
             False
@@ -286,15 +286,15 @@ class DatasetsPage(QWidget):
 
         # Get file path
         file_dialog_filters = {
-            "CSV": "CSV files (*.csv)",
-            "Excel": "Excel files (*.xlsx)",
-            "Parquet": "Parquet files (*.parquet)",
-            "JSON": "JSON files (*.json)"
+            "CSV": "CSV-файлы (*.csv)",
+            "Excel": "Excel-файлы (*.xlsx)",
+            "Parquet": "Parquet-файлы (*.parquet)",
+            "JSON": "JSON-файлы (*.json)"
         }
 
         file_path, _ = QFileDialog.getSaveFileName(
             self,
-            "Export Dataset",
+            "Экспорт датасета",
             f"{self.current_dataset}_{self.current_version}",
             file_dialog_filters[format_choice]
         )
@@ -314,14 +314,14 @@ class DatasetsPage(QWidget):
             
             QMessageBox.information(
                 self,
-                "Success",
-                f"Dataset exported to {file_path}"
+                "Успех",
+                f"Датасет экспортирован в {file_path}"
             )
         except Exception as e:
             QMessageBox.critical(
                 self,
-                "Export Error",
-                f"Failed to export: {str(e)}"
+                "Ошибка экспорта",
+                f"Не удалось экспортировать: {str(e)}"
             )
 
     def open_train_model(self):
@@ -329,8 +329,8 @@ class DatasetsPage(QWidget):
         if not self.current_dataset or not self.current_version:
             QMessageBox.warning(
                 self,
-                "Warning",
-                "Please load a dataset and version first."
+                "Предупреждение",
+                "Сначала загрузите датасет и версию."
             )
             return
 
@@ -338,8 +338,8 @@ class DatasetsPage(QWidget):
         if not hasattr(main_window, 'pages'):
             QMessageBox.critical(
                 self,
-                "Error",
-                "Could not access ML Lab page."
+                "Ошибка",
+                "Не удалось открыть страницу ML-лаборатории."
             )
             return
 
@@ -357,8 +357,8 @@ class DatasetsPage(QWidget):
         except Exception as e:
             QMessageBox.warning(
                 self,
-                "Warning",
-                f"Could not pre-select dataset/version: {str(e)}"
+                "Предупреждение",
+                f"Не удалось заранее выбрать датасет/версию: {str(e)}"
             )
 
         main_window.pages.setCurrentIndex(2)
@@ -368,8 +368,8 @@ class DatasetsPage(QWidget):
         if not self.current_dataset or self.current_df is None:
             QMessageBox.warning(
                 self,
-                "Warning",
-                "Please load a dataset and version first."
+                "Предупреждение",
+                "Сначала загрузите датасет и версию."
             )
             return
 
@@ -385,8 +385,8 @@ class DatasetsPage(QWidget):
             # Ask for version name
             version_name, ok = QInputDialog.getText(
                 self,
-                "Save Version",
-                "Enter new version name:"
+                "Сохранить версию",
+                "Введите имя новой версии:"
             )
             if not ok or not version_name:
                 return
@@ -408,14 +408,14 @@ class DatasetsPage(QWidget):
                 self.load_version(version_name)
                 QMessageBox.information(
                     self,
-                    "Success",
-                    f"Synthetic version '{version_name}' created!"
+                    "Успех",
+                    f"Синтетическая версия '{version_name}' создана!"
                 )
             except Exception as e:
                 QMessageBox.critical(
                     self,
-                    "Error",
-                    f"Failed to save version: {str(e)}"
+                    "Ошибка",
+                    f"Не удалось сохранить версию: {str(e)}"
                 )
 
     
@@ -425,8 +425,8 @@ class DatasetsPage(QWidget):
         if self.current_dataset is None:
             QMessageBox.warning(
                 self,
-                "Warning",
-                "Please load a dataset first."
+                "Предупреждение",
+                "Сначала загрузите датасет."
             )
             return
 
@@ -450,7 +450,7 @@ class DatasetsPage(QWidget):
     def load_dataset(self, dataset_name):
 
         self.current_dataset = dataset_name
-        self.dataset_label.setText(f"Dataset: {dataset_name}")
+        self.dataset_label.setText(f"Датасет: {dataset_name}")
 
         version_graph = self.version_manager.get_version_graph(dataset_name)
 
@@ -478,11 +478,11 @@ class DatasetsPage(QWidget):
         self.current_version = version_name
         self.current_df = df
 
-        self.version_label.setText(f"Version: {version_name}")
+        self.version_label.setText(f"Версия: {version_name}")
         
         # Update dataset shape display (rows x columns)
         rows, cols = df.shape
-        self.shape_label.setText(f"Shape: {rows} rows × {cols} columns")
+        self.shape_label.setText(f"Размер: {rows} строк × {cols} столбцов")
 
         self.data_table.load_dataframe(df)
         self.distribution_plot.load_dataframe(
@@ -495,7 +495,7 @@ class DatasetsPage(QWidget):
         self.column_stats.display_stats({})
         self.distribution_plot.figure.clear()
         self.distribution_plot.canvas.draw()
-        self.distribution_plot.column_info_label.setText("Select a column to visualize")
+        self.distribution_plot.column_info_label.setText("Выберите столбец для визуализации")
 
     # -----------------------------------------------------
     # Column Statistics
@@ -535,9 +535,9 @@ class DatasetsPage(QWidget):
 
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Select dataset file",
+            "Выберите файл датасета",
             "",
-            "Data files (*.csv *.xlsx)"
+            "Файлы данных (*.csv *.xlsx)"
         )
 
         if not file_path:
@@ -545,8 +545,8 @@ class DatasetsPage(QWidget):
 
         dataset_name, ok = QInputDialog.getText(
             self,
-            "Dataset Name",
-            "Enter dataset name:"
+            "Название датасета",
+            "Введите название датасета:"
         )
 
         if not ok or not dataset_name:
@@ -565,7 +565,7 @@ class DatasetsPage(QWidget):
 
             QMessageBox.critical(
                 self,
-                "Import Error",
+                "Ошибка импорта",
                 str(e)
             )
 
@@ -578,8 +578,8 @@ class DatasetsPage(QWidget):
         if not self.current_dataset or self.current_df is None:
             QMessageBox.warning(
                 self,
-                "Warning",
-                "Please load a dataset and version first."
+                "Предупреждение",
+                "Сначала загрузите датасет и версию."
             )
             return
 
@@ -595,8 +595,8 @@ class DatasetsPage(QWidget):
             # Ask for version name
             version_name, ok = QInputDialog.getText(
                 self,
-                "Save Version",
-                "Enter new version name:"
+                "Сохранить версию",
+                "Введите имя новой версии:"
             )
 
             if not ok or not version_name:
@@ -623,15 +623,15 @@ class DatasetsPage(QWidget):
 
                 QMessageBox.information(
                     self,
-                    "Success",
-                    f"Version '{version_name}' created successfully!"
+                    "Успех",
+                    f"Версия '{version_name}' успешно создана!"
                 )
 
             except Exception as e:
                 QMessageBox.critical(
                     self,
-                    "Error",
-                    f"Failed to save version: {str(e)}"
+                    "Ошибка",
+                    f"Не удалось сохранить версию: {str(e)}"
                 )
 
     # -----------------------------------------------------
@@ -643,23 +643,23 @@ class DatasetsPage(QWidget):
         if not self.current_dataset or not self.current_version:
             QMessageBox.warning(
                 self,
-                "Warning",
-                "Please select a version to delete."
+                "Предупреждение",
+                "Выберите версию для удаления."
             )
             return
 
         if self.current_version == "raw":
             QMessageBox.warning(
                 self,
-                "Warning",
-                "Cannot delete the 'raw' version."
+                "Предупреждение",
+                "Нельзя удалить версию 'raw'."
             )
             return
 
         reply = QMessageBox.question(
             self,
-            "Confirm Delete",
-            f"Delete version '{self.current_version}'?",
+            "Подтвердите удаление",
+            f"Удалить версию '{self.current_version}'?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
 
@@ -680,15 +680,15 @@ class DatasetsPage(QWidget):
 
             QMessageBox.information(
                 self,
-                "Success",
-                f"Version '{temp_current_version}' deleted successfully!"
+                "Успех",
+                f"Версия '{temp_current_version}' успешно удалена!"
             )
 
         except Exception as e:
             QMessageBox.critical(
                 self,
-                "Error",
-                f"Failed to delete version: {str(e)}"
+                "Ошибка",
+                f"Не удалось удалить версию: {str(e)}"
             )
 
     def delete_current_dataset(self):
@@ -696,15 +696,15 @@ class DatasetsPage(QWidget):
         if not self.current_dataset:
             QMessageBox.warning(
                 self,
-                "Warning",
-                "Please select a dataset to delete."
+                "Предупреждение",
+                "Выберите датасет для удаления."
             )
             return
 
         reply = QMessageBox.question(
             self,
-            "Confirm Delete",
-            f"Delete dataset '{self.current_dataset}' and all its versions?",
+            "Подтвердите удаление",
+            f"Удалить датасет '{self.current_dataset}' и все его версии?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
 
@@ -723,8 +723,8 @@ class DatasetsPage(QWidget):
             # Reload datasets
             self._load_datasets()
 
-            self.dataset_label.setText("Dataset: None")
-            self.version_label.setText("Version: None")
+            self.dataset_label.setText("Датасет: нет")
+            self.version_label.setText("Версия: нет")
             self.data_table.table.setRowCount(0)
             self.distribution_plot.figure.clear()
             self.distribution_plot.canvas.draw()
@@ -732,13 +732,13 @@ class DatasetsPage(QWidget):
 
             QMessageBox.information(
                 self,
-                "Success",
-                f"Dataset '{dataset_name}' deleted successfully!"
+                "Успех",
+                f"Датасет '{dataset_name}' успешно удалён!"
             )
 
         except Exception as e:
             QMessageBox.critical(
                 self,
-                "Error",
-                f"Failed to delete dataset: {str(e)}"
+                "Ошибка",
+                f"Не удалось удалить датасет: {str(e)}"
             )

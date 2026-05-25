@@ -43,11 +43,11 @@ class VersionManager:
         meta = self._load_versions_meta(dataset_name)
 
         if version_name in meta:
-            raise ValueError(f"Version '{version_name}' already exists.")
+            raise ValueError(f"Версия '{version_name}' уже существует.")
 
         if parent_version is not None and parent_version not in meta:
             raise ValueError(
-                f"Parent version '{parent_version}' does not exist."
+                f"Родительская версия '{parent_version}' не существует."
             )
 
         meta[version_name] = {
@@ -66,7 +66,7 @@ class VersionManager:
     ) -> Dict:
         meta = self._load_versions_meta(dataset_name)
         if version_name not in meta:
-            raise ValueError(f"Version '{version_name}' not found.")
+            raise ValueError(f"Версия '{version_name}' не найдена.")
         return meta[version_name]
 
     def list_versions(self, dataset_name: str) -> List[str]:
@@ -84,7 +84,7 @@ class VersionManager:
         meta = self._load_versions_meta(dataset_name)
 
         if version_name not in meta:
-            raise ValueError(f"Version '{version_name}' not found.")
+            raise ValueError(f"Версия '{version_name}' не найдена.")
 
         lineage = []
         current = version_name
@@ -114,14 +114,14 @@ class VersionManager:
         meta = self._load_versions_meta(dataset_name)
 
         if version_name not in meta:
-            raise ValueError(f"Version '{version_name}' not found.")
+            raise ValueError(f"Версия '{version_name}' не найдена.")
 
         # Check for children
         for v, info in meta.items():
             if info["parent"] == version_name:
                 raise ValueError(
-                    f"Cannot delete version '{version_name}' "
-                    f"because it has child version '{v}'."
+                    f"Нельзя удалить версию '{version_name}', "
+                    f"потому что у неё есть дочерняя версия '{v}'."
                 )
 
         # Remove version file using file_store

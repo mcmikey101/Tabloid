@@ -94,7 +94,7 @@ class DatasetManager:
         path = Path(file_path)
 
         if not path.exists():
-            raise FileNotFoundError(f"File '{file_path}' not found.")
+            raise FileNotFoundError(f"Файл '{file_path}' не найден.")
 
         if path.suffix.lower() == ".csv":
             return pd.read_csv(path)
@@ -103,5 +103,5 @@ class DatasetManager:
             return pd.read_excel(path)
 
         raise ValueError(
-            "Unsupported file format. Only CSV and Excel are allowed."
+            "Неподдерживаемый формат файла. Разрешены только CSV и Excel."
         )

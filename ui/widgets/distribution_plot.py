@@ -56,7 +56,7 @@ class DistributionPlotWidget(QWidget):
         
         # Header with version info
         header_layout = QHBoxLayout()
-        self.version_label = QLabel("Version: None")
+        self.version_label = QLabel("Версия: нет")
         self.version_label.setStyleSheet("font-weight: bold; font-size: 11px; color: #e0e0e0;")
         header_layout.addWidget(self.version_label)
         header_layout.addStretch()
@@ -66,7 +66,7 @@ class DistributionPlotWidget(QWidget):
         controls_layout = QHBoxLayout()
         
         # Column selector (NEW)
-        column_label_text = QLabel("Column:")
+        column_label_text = QLabel("Столбец:")
         column_label_text.setStyleSheet("color: #e0e0e0;")
         self.column_select_combo = QComboBox()
         self.column_select_combo.setStyleSheet("""
@@ -91,7 +91,7 @@ class DistributionPlotWidget(QWidget):
         controls_layout.addSpacing(12)
         
         # Plot type selector
-        plot_label = QLabel("Plot Type:")
+        plot_label = QLabel("Тип графика:")
         plot_label.setStyleSheet("color: #e0e0e0;")
         self.plot_type_combo = QComboBox()
         self.plot_type_combo.setStyleSheet("""
@@ -106,7 +106,7 @@ class DistributionPlotWidget(QWidget):
                 border: none;
             }
         """)
-        self.plot_type_combo.addItems(["Histogram", "Box Plot", "Violin Plot", "Count Plot"])
+        self.plot_type_combo.addItems(["Гистограмма", "Диаграмма размаха", "Скрипичная диаграмма", "Диаграмма частот"])
         self.plot_type_combo.currentTextChanged.connect(self._on_plot_type_changed)
         controls_layout.addWidget(plot_label)
         controls_layout.addWidget(self.plot_type_combo)
@@ -116,7 +116,7 @@ class DistributionPlotWidget(QWidget):
         self.export_plot_btn = QPushButton("📊")
         self.export_plot_btn.setMaximumWidth(36)
         self.export_plot_btn.setMaximumHeight(32)
-        self.export_plot_btn.setToolTip("Export Plot")
+        self.export_plot_btn.setToolTip("Экспорт графика")
         self.export_plot_btn.setStyleSheet("""
             QPushButton {
                 background-color: transparent;
@@ -131,13 +131,13 @@ class DistributionPlotWidget(QWidget):
                 border: 1px solid #5b7cfa;
             }
         """)
-        self.export_plot_btn.clicked.connect(lambda: self._export_figure(self.figure, "Distribution Plot"))
+        self.export_plot_btn.clicked.connect(lambda: self._export_figure(self.figure, "График распределения"))
         controls_layout.addWidget(self.export_plot_btn)
         
         plot_layout.addLayout(controls_layout)
         
         # Column info label (simplified, shows current selection details)
-        self.column_info_label = QLabel("Select a column to visualize")
+        self.column_info_label = QLabel("Выберите столбец для визуализации")
         self.column_info_label.setStyleSheet("color: #999999; font-size: 10px;")
         plot_layout.addWidget(self.column_info_label)
 
@@ -149,7 +149,7 @@ class DistributionPlotWidget(QWidget):
         self.canvas = FigureCanvasQTAgg(self.figure)
         plot_layout.addWidget(self.canvas)
         
-        self.tabs.addTab(plot_widget, "Distribution")
+        self.tabs.addTab(plot_widget, "Распределение")
 
         # Scatter plot tab
         scatter_widget = QWidget()
@@ -159,14 +159,14 @@ class DistributionPlotWidget(QWidget):
         # Controls
         controls_layout = QHBoxLayout()
         
-        select_cols_label = QLabel("Columns:")
+        select_cols_label = QLabel("Столбцы:")
         select_cols_label.setStyleSheet("color: #e0e0e0;")
-        self.scatter_select_btn = QPushButton("Select 2-3 Features...")
+        self.scatter_select_btn = QPushButton("Выбрать 2-3 признака...")
         self.scatter_select_btn.clicked.connect(self._show_column_selection_dialog)
-        self.scatter_cols_label = QLabel("None selected")
+        self.scatter_cols_label = QLabel("Ничего не выбрано")
         self.scatter_cols_label.setStyleSheet("color: #999999; font-size: 10px;")
         
-        color_label = QLabel("Color by:")
+        color_label = QLabel("Цвет по:")
         color_label.setStyleSheet("color: #e0e0e0;")
         self.scatter_color_combo = QComboBox()
         self.scatter_color_combo.currentTextChanged.connect(self._on_scatter_plot_changed)
@@ -175,7 +175,7 @@ class DistributionPlotWidget(QWidget):
         self.export_scatter_btn = QPushButton("📊")
         self.export_scatter_btn.setMaximumWidth(36)
         self.export_scatter_btn.setMaximumHeight(32)
-        self.export_scatter_btn.setToolTip("Export Plot")
+        self.export_scatter_btn.setToolTip("Экспорт графика")
         self.export_scatter_btn.setStyleSheet("""
             QPushButton {
                 background-color: transparent;
@@ -190,7 +190,7 @@ class DistributionPlotWidget(QWidget):
                 border: 1px solid #5b7cfa;
             }
         """)
-        self.export_scatter_btn.clicked.connect(lambda: self._export_figure(self.scatter_figure, "Scatter Plot"))
+        self.export_scatter_btn.clicked.connect(lambda: self._export_figure(self.scatter_figure, "Точечный график"))
         
         controls_layout.addWidget(select_cols_label)
         controls_layout.addWidget(self.scatter_select_btn)
@@ -209,7 +209,7 @@ class DistributionPlotWidget(QWidget):
         self.scatter_canvas = FigureCanvasQTAgg(self.scatter_figure)
         scatter_layout.addWidget(self.scatter_canvas)
         
-        self.tabs.addTab(scatter_widget, "Scatter Plot")
+        self.tabs.addTab(scatter_widget, "Точечный график")
         
         # Metadata tab
         metadata_widget = QWidget()
@@ -231,7 +231,7 @@ class DistributionPlotWidget(QWidget):
         """)
         metadata_layout.addWidget(self.metadata_text)
         
-        self.tabs.addTab(metadata_widget, "Version Info")
+        self.tabs.addTab(metadata_widget, "Информация о версии")
         
         layout.addWidget(self.tabs)
         
@@ -257,12 +257,12 @@ class DistributionPlotWidget(QWidget):
             # Update color column options for scatter plot — "None" always first
             self.scatter_color_combo.blockSignals(True)
             self.scatter_color_combo.clear()
-            self.scatter_color_combo.addItem("None")
+            self.scatter_color_combo.addItem("Нет")
             self.scatter_color_combo.addItems(all_cols)
             self.scatter_color_combo.blockSignals(False)
         
         if version_name:
-            self.version_label.setText(f"Version: {version_name}")
+            self.version_label.setText(f"Версия: {version_name}")
             self._load_version_metadata(dataset_name, version_name)
 
     def _load_version_metadata(self, dataset_name: str, version_name: str):
@@ -278,9 +278,9 @@ class DistributionPlotWidget(QWidget):
                     self.version_meta = all_versions[version_name]
                     self._display_metadata()
             else:
-                self.metadata_text.setText("No version metadata found.")
+                self.metadata_text.setText("Метаданные версии не найдены.")
         except Exception as e:
-            self.metadata_text.setText(f"Error loading metadata: {str(e)}")
+            self.metadata_text.setText(f"Ошибка загрузки метаданных: {str(e)}")
 
     def _display_metadata(self):
         """Display metadata in a formatted way."""
@@ -289,22 +289,22 @@ class DistributionPlotWidget(QWidget):
         
         lines = []
         lines.append("=" * 60)
-        lines.append(f"VERSION: {self.current_version}")
+        lines.append(f"ВЕРСИЯ: {self.current_version}")
         lines.append("=" * 60)
         
         # Parent
-        parent = self.version_meta.get("parent", "None")
-        lines.append(f"\nParent Version: {parent}")
+        parent = self.version_meta.get("parent", "Нет")
+        lines.append(f"\nРодительская версия: {parent}")
         
         # Operation
-        operation = self.version_meta.get("operation", "Unknown")
-        lines.append(f"Operation: {operation}")
+        operation = self.version_meta.get("operation", "Неизвестно")
+        lines.append(f"Операция: {operation}")
         
         # Config
         config = self.version_meta.get("config", {})
         if config:
             lines.append("\n" + "-" * 60)
-            lines.append("CONFIGURATION:")
+            lines.append("КОНФИГУРАЦИЯ:")
             lines.append("-" * 60)
             self._format_config(config, lines, indent=0)
         
@@ -331,7 +331,7 @@ class DistributionPlotWidget(QWidget):
                 else:
                     lines.append(f"{indent_str}[{i}] {item}")
             if len(obj) > 10:
-                lines.append(f"{indent_str}... and {len(obj) - 10} more items")
+                lines.append(f"{indent_str}... и ещё {len(obj) - 10} элементов")
 
     def plot_column(self, column_name: str):
         """Plot the selected column. Also updates the dropdown selector."""
@@ -356,7 +356,7 @@ class DistributionPlotWidget(QWidget):
         if self.df is None or column_name not in self.df.columns:
             return
         
-        self.column_info_label.setText(f"Column: {column_name} | Type: {self.df[column_name].dtype}")
+        self.column_info_label.setText(f"Столбец: {column_name} | Тип: {self.df[column_name].dtype}")
         self._plot_selected_column(column_name)
 
     def _on_plot_type_changed(self):
@@ -384,35 +384,35 @@ class DistributionPlotWidget(QWidget):
         is_numeric = pd.api.types.is_numeric_dtype(series)
         
         try:
-            if plot_type == "Histogram":
+            if plot_type == "Гистограмма":
                 if is_numeric:
                     use_kde = len(series) <= 5000
                     sns.histplot(series.dropna(), kde=use_kde, ax=ax, bins=30)
-                    ax.set_title(f"Distribution of {column_name}")
+                    ax.set_title(f"Распределение {column_name}")
                 else:
                     self._plot_count(series, ax, column_name)
             
-            elif plot_type == "Box Plot":
+            elif plot_type == "Диаграмма размаха":
                 if is_numeric:
                     sns.boxplot(y=series.dropna(), ax=ax)
-                    ax.set_title(f"Box Plot of {column_name}")
+                    ax.set_title(f"Диаграмма размаха для {column_name}")
                     ax.set_ylabel(column_name)
                 else:
-                    ax.text(0.5, 0.5, "Box plot only for numeric columns",
+                    ax.text(0.5, 0.5, "Диаграмма размаха доступна только для числовых столбцов",
                         ha="center", va="center", transform=ax.transAxes)
-                    ax.set_title(f"{column_name} (Non-numeric)")
+                    ax.set_title(f"{column_name} (нечисловой)")
             
-            elif plot_type == "Violin Plot":
+            elif plot_type == "Скрипичная диаграмма":
                 if is_numeric:
                     sns.violinplot(y=series.dropna(), ax=ax)
-                    ax.set_title(f"Violin Plot of {column_name}")
+                    ax.set_title(f"Скрипичная диаграмма для {column_name}")
                     ax.set_ylabel(column_name)
                 else:
-                    ax.text(0.5, 0.5, "Violin plot only for numeric columns",
+                    ax.text(0.5, 0.5, "Скрипичная диаграмма доступна только для числовых столбцов",
                         ha="center", va="center", transform=ax.transAxes)
-                    ax.set_title(f"{column_name} (Non-numeric)")
+                    ax.set_title(f"{column_name} (нечисловой)")
             
-            elif plot_type == "Count Plot":
+            elif plot_type == "Диаграмма частот":
                 self._plot_count(series, ax, column_name)
             
             # Apply dark theme styling to axes
@@ -421,7 +421,7 @@ class DistributionPlotWidget(QWidget):
             ax.tick_params(axis="x", rotation=45)
             self.figure.tight_layout()
         except Exception as e:
-            ax.text(0.5, 0.5, f"Error plotting: {str(e)}",
+            ax.text(0.5, 0.5, f"Ошибка построения: {str(e)}",
                 ha="center", va="center", transform=ax.transAxes)
         
         self.canvas.draw()
@@ -450,11 +450,11 @@ class DistributionPlotWidget(QWidget):
             top_categories = series.value_counts().head(20).index
             series_filtered = series[series.isin(top_categories)]
             sns.countplot(x=series_filtered.astype(str), ax=ax)
-            ax.set_xlabel(f"{column_name} (Top 20 categories)")
+            ax.set_xlabel(f"{column_name} (топ-20 категорий)")
         else:
             sns.countplot(x=series.astype(str), ax=ax)
             ax.set_xlabel(column_name)
-        ax.set_title(f"Count Plot of {column_name}")
+        ax.set_title(f"Диаграмма частот для {column_name}")
 
     # ===== Scatter Plot Methods =====
     
@@ -468,16 +468,16 @@ class DistributionPlotWidget(QWidget):
         
         if len(numerical_cols) < 2:
             from PySide6.QtWidgets import QMessageBox
-            QMessageBox.warning(None, "Error", "Need at least 2 numerical columns for scatter plot.")
+            QMessageBox.warning(None, "Ошибка", "Для точечного графика нужны минимум 2 числовых столбца.")
             return
         
         dialog = QDialog(self)
-        dialog.setWindowTitle("Select Columns for Scatter Plot")
+        dialog.setWindowTitle("Выбор столбцов для точечного графика")
         dialog.resize(400, 300)
         
         layout = QVBoxLayout(dialog)
         
-        label = QLabel("Select 2 or 3 numerical columns for scatter plot:")
+        label = QLabel("Выберите 2 или 3 числовых столбца для точечного графика:")
         label.setStyleSheet("color: #e0e0e0;")
         layout.addWidget(label)
         
@@ -508,7 +508,7 @@ class DistributionPlotWidget(QWidget):
         
         button_layout = QHBoxLayout()
         ok_btn = QPushButton("OK")
-        cancel_btn = QPushButton("Cancel")
+        cancel_btn = QPushButton("Отмена")
         
         def on_ok():
             selected = []
@@ -518,11 +518,11 @@ class DistributionPlotWidget(QWidget):
             
             if len(selected) < 2:
                 from PySide6.QtWidgets import QMessageBox
-                QMessageBox.warning(dialog, "Error", "Select at least 2 columns.")
+                QMessageBox.warning(dialog, "Ошибка", "Выберите минимум 2 столбца.")
                 return
             if len(selected) > 3:
                 from PySide6.QtWidgets import QMessageBox
-                QMessageBox.warning(dialog, "Error", "Select at most 3 columns.")
+                QMessageBox.warning(dialog, "Ошибка", "Выберите максимум 3 столбца.")
                 return
             
             self.selected_scatter_columns = selected
@@ -552,7 +552,7 @@ class DistributionPlotWidget(QWidget):
             return
         
         color_col = self.scatter_color_combo.currentText()
-        use_color = color_col and color_col != "None" and color_col in self.df.columns
+        use_color = color_col and color_col != "Нет" and color_col in self.df.columns
         
         df = self.df.copy()
         
@@ -596,7 +596,7 @@ class DistributionPlotWidget(QWidget):
                 
                 ax.set_xlabel(x_col)
                 ax.set_ylabel(y_col)
-                ax.set_title(f"Scatter Plot: {x_col} vs {y_col}")
+                ax.set_title(f"Точечный график: {x_col} vs {y_col}")
                 self._apply_dark_theme_styling(ax)
             
             else:  # 3D
@@ -624,7 +624,7 @@ class DistributionPlotWidget(QWidget):
                 ax.set_xlabel(x_col)
                 ax.set_ylabel(y_col)
                 ax.set_zlabel(z_col)
-                ax.set_title("3D Scatter Plot")
+                ax.set_title("3D точечный график")
                 
                 ax.xaxis.pane.fill = False
                 ax.yaxis.pane.fill = False
@@ -641,7 +641,7 @@ class DistributionPlotWidget(QWidget):
             self.scatter_figure.tight_layout()
         except Exception as e:
             ax = self.scatter_figure.add_subplot(111)
-            ax.text(0.5, 0.5, f"Error plotting: {str(e)}",
+            ax.text(0.5, 0.5, f"Ошибка построения: {str(e)}",
                 ha="center", va="center", transform=ax.transAxes, color='#333333')
         
         self.scatter_canvas.draw()
@@ -654,7 +654,7 @@ class DistributionPlotWidget(QWidget):
             plot_name: Name of the plot type for the file dialog title
         """
         if figure is None:
-            QMessageBox.warning(self, "Error", "No plot to export.")
+            QMessageBox.warning(self, "Ошибка", "Нет графика для экспорта.")
             return
         
         # Determine default filename
@@ -666,9 +666,9 @@ class DistributionPlotWidget(QWidget):
         # File dialog
         file_path, _ = QFileDialog.getSaveFileName(
             self,
-            f"Export {plot_name}",
+            f"Экспорт: {plot_name}",
             default_filename,
-            "PNG Images (*.png);;JPEG Images (*.jpg *.jpeg);;PDF Documents (*.pdf);;All Files (*)"
+            "PNG-изображения (*.png);;JPEG-изображения (*.jpg *.jpeg);;PDF-документы (*.pdf);;Все файлы (*)"
         )
         
         if not file_path:
@@ -683,6 +683,6 @@ class DistributionPlotWidget(QWidget):
                 bbox_inches='tight',
                 dpi=150
             )
-            QMessageBox.information(self, "Success", f"Plot exported to:\n{file_path}")
+            QMessageBox.information(self, "Успех", f"График экспортирован в:\n{file_path}")
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to export plot:\n{str(e)}")
+            QMessageBox.critical(self, "Ошибка", f"Не удалось экспортировать график:\n{str(e)}")

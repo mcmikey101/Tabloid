@@ -59,7 +59,7 @@ def _create_synthesizer(
         )
 
     raise ValueError(
-        "Unsupported model_type. Choose from: "
+        "Неподдерживаемый model_type. Выберите один из: "
         "gaussian_copula, ctgan, tvae."
     )
 
@@ -85,13 +85,13 @@ def train_synthesizer(
 
     # Check for cancellation before training
     if cancel_requested_func and cancel_requested_func():
-        raise CancellationException("Training cancelled by user")
+        raise CancellationException("Обучение отменено пользователем")
 
     synthesizer.fit(df)
 
     # Check for cancellation after training
     if cancel_requested_func and cancel_requested_func():
-        raise CancellationException("Training cancelled by user")
+        raise CancellationException("Обучение отменено пользователем")
 
     config = {
         "operation": "train_synthesizer",
@@ -115,13 +115,13 @@ def generate_synthetic_data(
 
     # Check for cancellation before generating
     if cancel_requested_func and cancel_requested_func():
-        raise CancellationException("Data generation cancelled by user")
+        raise CancellationException("Генерация данных отменена пользователем")
 
     synthetic_df = synthesizer.sample(num_rows)
 
     # Check for cancellation after generating
     if cancel_requested_func and cancel_requested_func():
-        raise CancellationException("Data generation cancelled by user")
+        raise CancellationException("Генерация данных отменена пользователем")
 
     config = {
         "operation": "generate_synthetic_data",
@@ -143,7 +143,7 @@ def evaluate_synthetic_quality(
 
     # Check for cancellation before evaluating
     if cancel_requested_func and cancel_requested_func():
-        raise CancellationException("Quality evaluation cancelled by user")
+        raise CancellationException("Оценка качества отменена пользователем")
 
     metadata = build_metadata(real_df)
 
@@ -155,7 +155,7 @@ def evaluate_synthetic_quality(
 
     # Check for cancellation after evaluating
     if cancel_requested_func and cancel_requested_func():
-        raise CancellationException("Quality evaluation cancelled by user")
+        raise CancellationException("Оценка качества отменена пользователем")
 
     properties = report.get_properties()
 

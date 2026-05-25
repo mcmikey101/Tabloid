@@ -38,7 +38,7 @@ class ConfusionMatrixWidget(QWidget):
         layout.setSpacing(8)
         
         # Title
-        title = QLabel("Confusion Matrix")
+        title = QLabel("Матрица ошибок")
         title.setStyleSheet("color: #e0e0e0; font-weight: bold; font-size: 11px;")
         layout.addWidget(title)
         
@@ -51,7 +51,7 @@ class ConfusionMatrixWidget(QWidget):
         
         # Button layout
         button_layout = QHBoxLayout()
-        self.export_btn = QPushButton("Export as PNG")
+        self.export_btn = QPushButton("Экспорт в PNG")
         self.export_btn.setStyleSheet("""
             QPushButton {
                 background-color: #5b7cfa;
@@ -117,9 +117,9 @@ class ConfusionMatrixWidget(QWidget):
                        color=color, fontsize=12, fontweight='bold')
         
         # Labels
-        ax.set_ylabel('True Label', color='#b0b0b0', fontweight='bold')
-        ax.set_xlabel('Predicted Label', color='#b0b0b0', fontweight='bold')
-        ax.set_title('Confusion Matrix', color='#e0e0e0', fontweight='bold', pad=20)
+        ax.set_ylabel('Истинная метка', color='#b0b0b0', fontweight='bold')
+        ax.set_xlabel('Предсказанная метка', color='#b0b0b0', fontweight='bold')
+        ax.set_title('Матрица ошибок', color='#e0e0e0', fontweight='bold', pad=20)
         
         # Tight layout
         plt.tight_layout()
@@ -140,14 +140,14 @@ class ConfusionMatrixWidget(QWidget):
     def _export_as_png(self):
         """Export the confusion matrix as a PNG file."""
         if self.confusion_matrix is None:
-            QMessageBox.warning(self, "Warning", "No confusion matrix to export.")
+            QMessageBox.warning(self, "Предупреждение", "Нет матрицы ошибок для экспорта.")
             return
         
         file_path, _ = QFileDialog.getSaveFileName(
             self,
-            "Save Confusion Matrix",
+            "Сохранить матрицу ошибок",
             "",
-            "PNG Files (*.png);;SVG Files (*.svg)"
+            "PNG-файлы (*.png);;SVG-файлы (*.svg)"
         )
         
         if not file_path:
@@ -184,9 +184,9 @@ class ConfusionMatrixWidget(QWidget):
                            color=color, fontsize=12, fontweight='bold')
             
             # Labels
-            ax.set_ylabel('True Label', color='#b0b0b0', fontweight='bold')
-            ax.set_xlabel('Predicted Label', color='#b0b0b0', fontweight='bold')
-            ax.set_title('Confusion Matrix', color='#e0e0e0', fontweight='bold', pad=20)
+            ax.set_ylabel('Истинная метка', color='#b0b0b0', fontweight='bold')
+            ax.set_xlabel('Предсказанная метка', color='#b0b0b0', fontweight='bold')
+            ax.set_title('Матрица ошибок', color='#e0e0e0', fontweight='bold', pad=20)
             
             # Tight layout
             plt.tight_layout()
@@ -195,9 +195,9 @@ class ConfusionMatrixWidget(QWidget):
             fig.savefig(file_path, facecolor='#262738', edgecolor='none', bbox_inches='tight')
             plt.close(fig)
             
-            QMessageBox.information(self, "Success", f"Confusion matrix saved to:\n{file_path}")
+            QMessageBox.information(self, "Успех", f"Матрица ошибок сохранена в:\n{file_path}")
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to export confusion matrix:\n{str(e)}")
+            QMessageBox.critical(self, "Ошибка", f"Не удалось экспортировать матрицу ошибок:\n{str(e)}")
 
 
 class ROCCurveWidget(QWidget):
@@ -215,7 +215,7 @@ class ROCCurveWidget(QWidget):
         layout.setSpacing(8)
         
         # Title
-        title = QLabel("ROC Curve")
+        title = QLabel("ROC-кривая")
         title.setStyleSheet("color: #e0e0e0; font-weight: bold; font-size: 11px;")
         layout.addWidget(title)
         
@@ -228,7 +228,7 @@ class ROCCurveWidget(QWidget):
         
         # Button layout
         button_layout = QHBoxLayout()
-        self.export_btn = QPushButton("Export as PNG")
+        self.export_btn = QPushButton("Экспорт в PNG")
         self.export_btn.setStyleSheet("""
             QPushButton {
                 background-color: #5b7cfa;
@@ -267,7 +267,7 @@ class ROCCurveWidget(QWidget):
         ax.set_facecolor('#1a1a25')
         
         # Plot diagonal line
-        ax.plot([0, 1], [0, 1], 'k--', color='#666666', linewidth=1.5, label='Random')
+        ax.plot([0, 1], [0, 1], 'k--', color='#666666', linewidth=1.5, label='Случайно')
         
         # Plot ROC curves
         colors = ['#5b7cfa', '#51cf66', '#ff6b6b', '#ffd43b']
@@ -279,14 +279,14 @@ class ROCCurveWidget(QWidget):
             
             color = colors[idx % len(colors)]
             ax.plot(fpr, tpr, color=color, linewidth=2.5,
-                   label=f'Class {class_label} (AUC = {roc_auc:.3f})')
+                   label=f'Класс {class_label} (AUC = {roc_auc:.3f})')
         
         # Configure axes
         ax.set_xlim([0.0, 1.0])
         ax.set_ylim([0.0, 1.05])
-        ax.set_xlabel('False Positive Rate', color='#b0b0b0', fontweight='bold')
-        ax.set_ylabel('True Positive Rate', color='#b0b0b0', fontweight='bold')
-        ax.set_title('ROC Curve', color='#e0e0e0', fontweight='bold', pad=20)
+        ax.set_xlabel('Доля ложноположительных', color='#b0b0b0', fontweight='bold')
+        ax.set_ylabel('Доля истинноположительных', color='#b0b0b0', fontweight='bold')
+        ax.set_title('ROC-кривая', color='#e0e0e0', fontweight='bold', pad=20)
         
         # Configure legend
         ax.legend(loc="lower right", framealpha=0.9, facecolor='#1a1a25', 
@@ -317,14 +317,14 @@ class ROCCurveWidget(QWidget):
     def _export_as_png(self):
         """Export the ROC curve as a PNG file."""
         if not self.roc_data:
-            QMessageBox.warning(self, "Warning", "No ROC curve to export.")
+            QMessageBox.warning(self, "Предупреждение", "Нет ROC-кривой для экспорта.")
             return
         
         file_path, _ = QFileDialog.getSaveFileName(
             self,
-            "Save ROC Curve",
+            "Сохранить ROC-кривую",
             "",
-            "PNG Files (*.png);;SVG Files (*.svg)"
+            "PNG-файлы (*.png);;SVG-файлы (*.svg)"
         )
         
         if not file_path:
@@ -337,7 +337,7 @@ class ROCCurveWidget(QWidget):
             ax.set_facecolor('#1a1a25')
             
             # Plot diagonal line
-            ax.plot([0, 1], [0, 1], 'k--', color='#666666', linewidth=2, label='Random')
+            ax.plot([0, 1], [0, 1], 'k--', color='#666666', linewidth=2, label='Случайно')
             
             # Plot ROC curves
             colors = ['#5b7cfa', '#51cf66', '#ff6b6b', '#ffd43b']
@@ -349,14 +349,14 @@ class ROCCurveWidget(QWidget):
                 
                 color = colors[idx % len(colors)]
                 ax.plot(fpr, tpr, color=color, linewidth=2.5,
-                       label=f'Class {class_label} (AUC = {roc_auc:.3f})')
+                       label=f'Класс {class_label} (AUC = {roc_auc:.3f})')
             
             # Configure axes
             ax.set_xlim([0.0, 1.0])
             ax.set_ylim([0.0, 1.05])
-            ax.set_xlabel('False Positive Rate', color='#b0b0b0', fontweight='bold', fontsize=12)
-            ax.set_ylabel('True Positive Rate', color='#b0b0b0', fontweight='bold', fontsize=12)
-            ax.set_title('ROC Curve', color='#e0e0e0', fontweight='bold', pad=20, fontsize=14)
+            ax.set_xlabel('Доля ложноположительных', color='#b0b0b0', fontweight='bold', fontsize=12)
+            ax.set_ylabel('Доля истинноположительных', color='#b0b0b0', fontweight='bold', fontsize=12)
+            ax.set_title('ROC-кривая', color='#e0e0e0', fontweight='bold', pad=20, fontsize=14)
             
             # Configure legend
             ax.legend(loc="lower right", framealpha=0.9, facecolor='#1a1a25', 
@@ -375,6 +375,6 @@ class ROCCurveWidget(QWidget):
             fig.savefig(file_path, facecolor='#262738', edgecolor='none', bbox_inches='tight')
             plt.close(fig)
             
-            QMessageBox.information(self, "Success", f"ROC curve saved to:\n{file_path}")
+            QMessageBox.information(self, "Успех", f"ROC-кривая сохранена в:\n{file_path}")
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to export ROC curve:\n{str(e)}")
+            QMessageBox.critical(self, "Ошибка", f"Не удалось экспортировать ROC-кривую:\n{str(e)}")

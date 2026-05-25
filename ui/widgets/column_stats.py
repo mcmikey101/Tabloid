@@ -15,7 +15,7 @@ class ColumnStatsWidget(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         
-        box = QGroupBox("Column Statistics")
+        box = QGroupBox("Статистика столбца")
         box_layout = QVBoxLayout(box)
         
         # Scroll area for stats
@@ -49,7 +49,7 @@ class ColumnStatsWidget(QWidget):
                 item.widget().deleteLater()
         
         if not stats:
-            empty_label = QLabel("No statistics available")
+            empty_label = QLabel("Статистика недоступна")
             empty_label.setStyleSheet("color: #999999;")
             self.card_layout.addWidget(empty_label)
             return
@@ -58,7 +58,7 @@ class ColumnStatsWidget(QWidget):
         header_layout = QHBoxLayout()
         header_layout.setSpacing(8)
         
-        column_name = stats.get("name", "Unknown")
+        column_name = stats.get("name", "Неизвестно")
         column_label = QLabel(column_name)
         column_font = QFont()
         column_font.setBold(True)
@@ -77,14 +77,14 @@ class ColumnStatsWidget(QWidget):
         
         # Datatype as text
         dtype = stats.get("dtype", "unknown")
-        dtype_label = QLabel(f"Type: {dtype}")
+        dtype_label = QLabel(f"Тип: {dtype}")
         dtype_label.setStyleSheet("color: #b0b0b0; font-size: 10px;")
         self.card_layout.addWidget(dtype_label)
         
         if total > 0:
             count_layout = QHBoxLayout()
             
-            count_label = QLabel(f"Count: {count} / {total}")
+            count_label = QLabel(f"Количество: {count} / {total}")
             count_label.setStyleSheet("color: #e0e0e0; font-size: 10px;")
             count_layout.addWidget(count_label)
             
@@ -109,7 +109,7 @@ class ColumnStatsWidget(QWidget):
             count_layout.addWidget(progress)
             
             if missing > 0:
-                missing_label = QLabel(f"Missing: {missing} ({100 * missing / total:.1f}%)")
+                missing_label = QLabel(f"Пропущено: {missing} ({100 * missing / total:.1f}%)")
                 missing_label.setStyleSheet("color: #ff6b6b; font-size: 10px;")
                 count_layout.addWidget(missing_label)
             
@@ -126,7 +126,7 @@ class ColumnStatsWidget(QWidget):
             table.setMaximumHeight(120)
             table.setColumnCount(2)
             table.setRowCount(len(numeric_stats))
-            table.setHorizontalHeaderLabels(["Statistic", "Value"])
+            table.setHorizontalHeaderLabels(["Статистика", "Значение"])
             table.setStyleSheet("""
                 QTableWidget {
                     background-color: #1a1a25;
@@ -175,13 +175,13 @@ class ColumnStatsWidget(QWidget):
         
         # For categorical columns, show unique values and top categories
         elif "top_values" in stats and stats["top_values"]:
-            unique_label = QLabel(f"Unique Values: {stats.get('unique', 0)}")
+            unique_label = QLabel(f"Уникальные значения: {stats.get('unique', 0)}")
             unique_label.setStyleSheet("color: #e0e0e0; font-size: 10px; font-weight: bold;")
             self.card_layout.addWidget(unique_label)
             
             top_values = stats.get("top_values", {})
             if top_values:
-                top_label = QLabel("Top Categories:")
+                top_label = QLabel("Частые категории:")
                 top_label.setStyleSheet("color: #b0b0b0; font-size: 10px; margin-top: 6px;")
                 self.card_layout.addWidget(top_label)
                 
@@ -190,7 +190,7 @@ class ColumnStatsWidget(QWidget):
                 top_table.setMaximumHeight(120)
                 top_table.setColumnCount(2)
                 top_table.setRowCount(len(top_values))
-                top_table.setHorizontalHeaderLabels(["Category", "Count"])
+                top_table.setHorizontalHeaderLabels(["Категория", "Количество"])
                 top_table.setStyleSheet("""
                     QTableWidget {
                         background-color: #1a1a25;

@@ -13,7 +13,7 @@ class DataTableWidget(QWidget):
     def _build_ui(self):
         layout = QVBoxLayout(self)
 
-        label = QLabel("Data Preview")
+        label = QLabel("Предпросмотр данных")
         layout.addWidget(label)
 
         self.table = QTableWidget()

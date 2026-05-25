@@ -12,7 +12,7 @@ class ProgressDialog(QDialog):
     Modal dialog showing progress of a long-running operation.
     """
     
-    def __init__(self, title: str = "Processing", parent=None, allow_cancel: bool = True):
+    def __init__(self, title: str = "Обработка", parent=None, allow_cancel: bool = True):
         """
         Initialize progress dialog.
         
@@ -53,7 +53,7 @@ class ProgressDialog(QDialog):
         layout.addWidget(self.title_label)
         
         # Status label
-        self.status_label = QLabel("Starting...")
+        self.status_label = QLabel("Запуск...")
         layout.addWidget(self.status_label)
         
         # Progress bar
@@ -64,7 +64,7 @@ class ProgressDialog(QDialog):
         layout.addWidget(self.progress_bar)
         
         # Cancel button (enabled by default)
-        self.cancel_btn = QPushButton("Cancel")
+        self.cancel_btn = QPushButton("Отмена")
         self.cancel_btn.clicked.connect(self._on_cancel_clicked)
         layout.addWidget(self.cancel_btn)
     
@@ -98,8 +98,8 @@ class ProgressDialog(QDialog):
     def _on_cancel_clicked(self):
         """Handle cancel button click."""
         self.cancel_btn.setEnabled(False)
-        self.cancel_btn.setText("Cancelling...")
-        self.status_label.setText("Waiting for operation to stop...")
+        self.cancel_btn.setText("Отмена...")
+        self.status_label.setText("Ожидание остановки операции...")
         if self._cancel_callback:
             self._cancel_callback()
         # Close the dialog after requesting cancellation
@@ -108,7 +108,7 @@ class ProgressDialog(QDialog):
     
     def mark_cancelled(self):
         """Mark the dialog as cancelled and update UI."""
-        self.status_label.setText("Cancellation requested")
+        self.status_label.setText("Запрошена отмена")
         self.cancel_btn.setEnabled(False)
-        self.cancel_btn.setText("Cancelled")
+        self.cancel_btn.setText("Отменено")
 

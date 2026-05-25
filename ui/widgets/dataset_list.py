@@ -15,15 +15,15 @@ class DatasetListWidget(QWidget):
     def _build_ui(self):
         layout = QVBoxLayout(self)
 
-        label = QLabel("Datasets")
+        label = QLabel("Датасеты")
         layout.addWidget(label)
 
         # Search bar
         search_layout = QHBoxLayout()
-        search_label = QLabel("Search:")
+        search_label = QLabel("Поиск:")
         search_label.setStyleSheet("color: #e0e0e0; font-size: 10px;")
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("Filter datasets...")
+        self.search_input.setPlaceholderText("Фильтр датасетов...")
         self.search_input.setStyleSheet("""
             QLineEdit {
                 background-color: #2b2d42;
@@ -53,7 +53,7 @@ class DatasetListWidget(QWidget):
 
         layout.addWidget(self.list_widget)
 
-        self.add_button = QPushButton("Add Dataset")
+        self.add_button = QPushButton("Добавить датасет")
         self.add_button.setStyleSheet("""
             QPushButton {
                 background-color: #5b7cfa;

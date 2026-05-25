@@ -33,80 +33,80 @@ from ui.widgets.column_selector import ColumnSelectorPanel
 
 # Operation groups and metadata
 OPERATION_GROUPS = {
-    "Cleaning": [
-        ("handle_missing_values", "Handle Missing Values", "Fill or remove rows with missing data using mean, median, mode, or drop strategies"),
-        ("drop_columns", "Drop Columns", "Remove specified columns from the dataset"),
-        ("drop_outliers", "Drop Outliers", "Remove rows with outlier values using IQR or Z-score methods"),
-        ("drop_high_corr_features", "Drop High Corr Features", "Remove highly correlated features (default: >0.95 correlation). Uses Pearson correlation coefficient."),
+    "Очистка": [
+        ("handle_missing_values", "Обработка пропущенных значений", "Заполнение или удаление строк с пропущенными данными: среднее, медиана, мода или удаление"),
+        ("drop_columns", "Удаление столбцов", "Удалить указанные столбцы из набора данных"),
+        ("drop_outliers", "Удаление выбросов", "Удалить строки с выбросами методом IQR или Z-оценки"),
+        ("drop_high_corr_features", "Удаление высококоррелированных признаков", "Удалить сильно коррелирующие признаки (по умолчанию: корреляция >0.95). Используется коэффициент корреляции Пирсона."),
     ],
-    "Scaling": [
-        ("standard_scale", "Standard Scale", "Normalize features to mean=0, std=1 using z-score normalization (x = (x - mean) / std)"),
-        ("minmax_scale", "Min-Max Scale", "Scale features to [0, 1] range using min-max normalization (x = (x - min) / (max - min))"),
+    "Масштабирование": [
+        ("standard_scale", "Стандартное масштабирование", "Нормализация признаков до среднего=0, std=1 методом z-оценки (x = (x - среднее) / std)"),
+        ("minmax_scale", "Min-Max масштабирование", "Масштабирование признаков в диапазон [0, 1] методом min-max (x = (x - min) / (max - min))"),
     ],
-    "Encoding": [
-        ("one_hot_encode", "One-Hot Encode", "Convert categorical columns to binary indicators (one column per category). Solves multicollinearity with drop_first option."),
-        ("encode_classes", "Encode Classes", "Convert categorical values to numeric labels (e.g., A→0, B→1). Use for ordinal data or label encoding."),
+    "Кодирование": [
+        ("one_hot_encode", "One-Hot кодирование", "Преобразование категориальных столбцов в бинарные индикаторы (один столбец на категорию). Решает мультиколлинеарность с опцией drop_first."),
+        ("encode_classes", "Кодирование классов", "Преобразование категориальных значений в числовые метки (например, A→0, B→1). Используется для порядковых данных или кодирования меток."),
     ],
-    "Reduction": [
-        ("reduce_dimensionality", "Dimensionality Reduction", "Reduce number of features using PCA (linear), t-SNE (nonlinear), or UMAP (nonlinear)"),
+    "Снижение размерности": [
+        ("reduce_dimensionality", "Снижение размерности", "Уменьшение числа признаков методами PCA (линейный), t-SNE (нелинейный) или UMAP (нелинейный)"),
     ],
 }
 
 
 class OperationsDialog(QDialog):
-    """Dialog for building and applying data operations sequentially."""
+    """Диалог для построения и последовательного применения операций над данными."""
 
     OPERATIONS = {
         "handle_missing_values": {
-            "name": "Handle Missing Values",
+            "name": "Обработка пропущенных значений",
             "requires_columns": False,
             "params": ["strategy"],
             "compatible_types": ["numeric", "categorical"],
         },
         "drop_columns": {
-            "name": "Drop Columns",
+            "name": "Удаление столбцов",
             "requires_columns": True,
             "params": [],
             "compatible_types": ["numeric", "categorical"],
         },
         "drop_outliers": {
-            "name": "Drop Outliers",
+            "name": "Удаление выбросов",
             "requires_columns": True,
             "params": ["method", "threshold"],
             "compatible_types": ["numeric"],
         },
         "drop_high_corr_features": {
-            "name": "Drop High Corr Features",
+            "name": "Удаление высококоррелированных признаков",
             "requires_columns": False,
             "params": ["threshold"],
             "compatible_types": ["numeric"],
         },
         "standard_scale": {
-            "name": "Standard Scale",
+            "name": "Стандартное масштабирование",
             "requires_columns": True,
             "params": [],
             "compatible_types": ["numeric"],
         },
         "minmax_scale": {
-            "name": "Min-Max Scale",
+            "name": "Min-Max масштабирование",
             "requires_columns": True,
             "params": [],
             "compatible_types": ["numeric"],
         },
         "one_hot_encode": {
-            "name": "One-Hot Encode",
+            "name": "One-Hot кодирование",
             "requires_columns": True,
             "params": ["drop_first"],
             "compatible_types": ["categorical"],
         },
         "encode_classes": {
-            "name": "Encode Classes",
+            "name": "Кодирование классов",
             "requires_columns": True,
             "params": [],
             "compatible_types": ["categorical"],
         },
         "reduce_dimensionality": {
-            "name": "Dimensionality Reduction",
+            "name": "Снижение размерности",
             "requires_columns": True,
             "params": ["method", "n_components"],
             "compatible_types": ["numeric"],
@@ -115,7 +115,7 @@ class OperationsDialog(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Operations Builder")
+        self.setWindowTitle("Конструктор операций")
         
         # Set responsive dialog size based on screen
         screen = QApplication.primaryScreen().availableGeometry()
@@ -138,7 +138,7 @@ class OperationsDialog(QDialog):
         self._build_ui()
     
     def _get_column_types(self, df: pd.DataFrame) -> Dict[str, str]:
-        """Determine column types: numeric or categorical."""
+        """Определить типы столбцов: числовой или категориальный."""
         col_types = {}
         for col in df.columns:
             if pd.api.types.is_numeric_dtype(df[col]):
@@ -148,20 +148,19 @@ class OperationsDialog(QDialog):
         return col_types
     
     def _is_operation_compatible(self, op_id: str, column_types: Dict[str, str]) -> Tuple[bool, str]:
-        """Check if operation is compatible with column types in dataset."""
+        """Проверить совместимость операции с типами столбцов набора данных."""
         op_info = self.OPERATIONS.get(op_id, {})
         compatible_types = op_info.get("compatible_types", [])
         
         if not compatible_types:
             return True, ""
         
-        # Check if dataset has at least one compatible column type
         has_compatible = not op_info.get("requires_columns", False) or any(
             ct in compatible_types for ct in column_types.values()
         )
         
         if not has_compatible:
-            incompatible_reason = f"Requires {' or '.join(compatible_types)} columns"
+            incompatible_reason = f"Требуются столбцы типа: {' или '.join(compatible_types)}"
             return False, incompatible_reason
         
         return True, ""
@@ -169,17 +168,14 @@ class OperationsDialog(QDialog):
     def _build_ui(self):
         layout = QVBoxLayout(self)
 
-        # Top: operations list with groups
-        ops_label = QLabel("Available Operations:")
+        ops_label = QLabel("Доступные операции:")
         layout.addWidget(ops_label)
 
         self.operations_list = QListWidget()
         self.operations_list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.operations_list.itemDoubleClicked.connect(self._on_operation_double_clicked)
         
-        # Populate operations grouped by category
         for group_name, operations in OPERATION_GROUPS.items():
-            # Add group header
             header_item = QListWidgetItem(group_name)
             header_font = QFont()
             header_font.setBold(True)
@@ -189,12 +185,9 @@ class OperationsDialog(QDialog):
             header_item.setFlags(header_item.flags() & ~Qt.ItemFlag.ItemIsSelectable)
             self.operations_list.addItem(header_item)
             
-            # Add operations in group
             for op_id, op_name, op_description in operations:
                 item = QListWidgetItem(f"  {op_name}")
                 item.setToolTip(op_description)
-                
-                # Store metadata in item data
                 item.setData(Qt.ItemDataRole.UserRole, {
                     "op_id": op_id,
                     "op_name": op_name,
@@ -202,7 +195,6 @@ class OperationsDialog(QDialog):
                 })
                 self.operations_list.addItem(item)
             
-            # Add spacing between groups
             spacing_item = QListWidgetItem()
             spacing_item.setText("")
             spacing_item.setFlags(spacing_item.flags() & ~Qt.ItemFlag.ItemIsSelectable)
@@ -211,43 +203,40 @@ class OperationsDialog(QDialog):
         self.operations_list.setMinimumHeight(300)
         layout.addWidget(self.operations_list)
 
-        # Middle: selected operations sequence
-        seq_label = QLabel("Operations Sequence:")
+        seq_label = QLabel("Последовательность операций:")
         seq_label_font = QFont()
         seq_label_font.setBold(True)
         seq_label.setFont(seq_label_font)
-        seq_label.setToolTip("⚠️ Order matters: encode before scaling, drop outliers before PCA, etc.")
+        seq_label.setToolTip("⚠️ Порядок важен: кодирование до масштабирования, удаление выбросов до PCA и т.д.")
         layout.addWidget(seq_label)
 
         self.sequence_table = QTableWidget()
         self.sequence_table.setColumnCount(4)
         self.sequence_table.setHorizontalHeaderLabels(
-            ["#", "Operation", "Configuration", "Actions"]
+            ["№", "Операция", "Конфигурация", "Действия"]
         )
         self.sequence_table.horizontalHeader().setStretchLastSection(False)
         self.sequence_table.horizontalHeader().setSectionResizeMode(
-            0, QHeaderView.ResizeMode.ResizeToContents  # Number
+            0, QHeaderView.ResizeMode.ResizeToContents
         )
         self.sequence_table.horizontalHeader().setSectionResizeMode(
-            1, QHeaderView.ResizeMode.Stretch  # Operation name
+            1, QHeaderView.ResizeMode.Stretch
         )
         self.sequence_table.horizontalHeader().setSectionResizeMode(
-            2, QHeaderView.ResizeMode.ResizeToContents  # Configuration
+            2, QHeaderView.ResizeMode.ResizeToContents
         )
         self.sequence_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        # Disable drag-drop - we'll use buttons instead
         self.sequence_table.setDragDropMode(QAbstractItemView.DragDropMode.NoDragDrop)
 
         layout.addWidget(self.sequence_table)
 
-        # Buttons
         button_layout = QHBoxLayout()
 
-        add_btn = QPushButton("Add Operation")
-        add_btn.setToolTip("Single-click an operation and click here, or double-click to add directly")
+        add_btn = QPushButton("Добавить операцию")
+        add_btn.setToolTip("Выберите операцию одним кликом и нажмите сюда, или дважды кликните для добавления")
         add_btn.clicked.connect(self._add_operation)
 
-        clear_btn = QPushButton("Clear All")
+        clear_btn = QPushButton("Очистить всё")
         clear_btn.clicked.connect(self._clear_operations)
 
         button_layout.addWidget(add_btn)
@@ -256,13 +245,12 @@ class OperationsDialog(QDialog):
 
         layout.addLayout(button_layout)
 
-        # Bottom: Apply and Save
         final_layout = QHBoxLayout()
 
-        apply_preview_btn = QPushButton("Preview")
+        apply_preview_btn = QPushButton("Предпросмотр")
         apply_preview_btn.clicked.connect(self._preview_operations)
 
-        save_btn = QPushButton("Apply & Save Version")
+        save_btn = QPushButton("Применить и сохранить версию")
         save_btn.clicked.connect(self._save_version)
 
         final_layout.addStretch()
@@ -272,15 +260,13 @@ class OperationsDialog(QDialog):
         layout.addLayout(final_layout)
 
     def set_dataframe(self, df: pd.DataFrame):
-        """Set the input dataframe for operations."""
+        """Установить входной датафрейм для операций."""
         self.input_df = df.copy()
         self.column_types = self._get_column_types(df)
-        
-        # Update operation compatibility indicators
         self._update_operation_compatibility()
     
     def _update_operation_compatibility(self):
-        """Update which operations are enabled/disabled based on column types."""
+        """Обновить доступность операций на основе типов столбцов."""
         if not self.column_types:
             return
         
@@ -303,14 +289,14 @@ class OperationsDialog(QDialog):
                 item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEnabled)
                 item.setForeground(QColor("#888888"))
                 original_tooltip = data.get("op_description", "")
-                item.setToolTip(f"{original_tooltip}\n\n⚠️ Not compatible: {reason}")
+                item.setToolTip(f"{original_tooltip}\n\n⚠️ Несовместима: {reason}")
             else:
                 item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEnabled)
                 item.setForeground(QColor("#e0e0e0"))
                 item.setToolTip(data.get("op_description", ""))
     
     def _on_operation_double_clicked(self, item: QListWidgetItem):
-        """Handle double-click on operation to add it directly."""
+        """Обработка двойного клика по операции для её добавления."""
         data = item.data(Qt.ItemDataRole.UserRole)
         if not data:
             return
@@ -319,19 +305,16 @@ class OperationsDialog(QDialog):
         if not op_id:
             return
         
-        # Check compatibility
         is_compatible, reason = self._is_operation_compatible(op_id, self.column_types)
         if not is_compatible:
-            QMessageBox.warning(self, "Incompatible Operation", 
-                              f"Cannot add this operation:\n{reason}")
+            QMessageBox.warning(self, "Несовместимая операция", 
+                              f"Невозможно добавить операцию:\n{reason}")
             return
         
-        # Show configuration dialog
         config = self._configure_operation(op_id)
         if config is None:
             return
 
-        # Add to sequence
         self.operations_sequence.append({
             "operation": op_id,
             "config": config,
@@ -340,39 +323,36 @@ class OperationsDialog(QDialog):
         self._update_sequence_table()
 
     def _add_operation(self):
-        """Add a new operation to the sequence."""
+        """Добавить новую операцию в последовательность."""
         current_row = self.operations_list.currentRow()
         if current_row < 0:
-            QMessageBox.warning(self, "Warning", "Please select an operation.")
+            QMessageBox.warning(self, "Предупреждение", "Выберите операцию.")
             return
         
         item = self.operations_list.currentItem()
         data = item.data(Qt.ItemDataRole.UserRole) if item else None
         
         if not data:
-            QMessageBox.warning(self, "Warning", "Please select an operation (not a header).")
+            QMessageBox.warning(self, "Предупреждение", "Выберите операцию (не заголовок).")
             return
         
         op_id = data.get("op_id")
         if not op_id:
-            QMessageBox.warning(self, "Warning", "Please select an operation (not a header).")
+            QMessageBox.warning(self, "Предупреждение", "Выберите операцию (не заголовок).")
             return
         
-        # Check compatibility first
         is_compatible, reason = self._is_operation_compatible(op_id, self.column_types)
         if not is_compatible:
-            QMessageBox.warning(self, "Incompatible Operation", 
-                              f"Cannot add this operation:\n{reason}")
+            QMessageBox.warning(self, "Несовместимая операция", 
+                              f"Невозможно добавить операцию:\n{reason}")
             return
         
         operation_info = self.OPERATIONS[op_id]
 
-        # Show configuration dialog
         config = self._configure_operation(op_id)
         if config is None:
             return
 
-        # Add to sequence
         self.operations_sequence.append({
             "operation": op_id,
             "config": config,
@@ -381,64 +361,57 @@ class OperationsDialog(QDialog):
         self._update_sequence_table()
 
     def _configure_operation(self, operation_id: str) -> Optional[Dict]:
-        """Show a configuration dialog for the selected operation."""
+        """Показать диалог настройки для выбранной операции."""
         operation_info = self.OPERATIONS[operation_id]
         config = {}
 
-        # Handle column selection
         if operation_info["requires_columns"]:
             columns = self.input_df.columns.tolist()
 
             if operation_id == "encode_classes":
-                # Single column selection
                 col, ok = self._select_single_column(columns)
                 if not ok:
                     return None
                 config["column"] = col
             else:
-                # Multiple columns selection
                 cols = self._select_columns(columns)
                 if cols is None:
                     return None
                 config["columns"] = cols
 
-        # Handle additional parameters
         if "strategy" in operation_info["params"]:
             strategies = ["mean", "median", "mode", "drop_rows", "drop_columns"]
             strategy, ok = self._select_from_list(
-                strategies, "Select Missing Value Strategy:"
+                strategies, "Выберите стратегию обработки пропущенных значений:"
             )
             if not ok:
                 return None
             config["strategy"] = strategy
 
         if "threshold" in operation_info["params"]:
-            threshold, ok = self._get_float_input("Threshold:", 0.8)
+            threshold, ok = self._get_float_input("Порог:", 0.8)
             if not ok:
                 return None
             config["threshold"] = threshold
 
         if "drop_first" in operation_info["params"]:
-            drop_first = self._get_bool_input("Drop first category?")
+            drop_first = self._get_bool_input("Удалить первую категорию?")
             config["drop_first"] = drop_first
 
-        # Handle dimensionality reduction parameters
         if operation_id == "reduce_dimensionality":
-            # Method selection for dimensionality reduction
             dr_methods = ["pca", "tsne", "umap"]
             method, ok = self._select_from_list(
-                dr_methods, "Select Dimensionality Reduction Method:"
+                dr_methods, "Выберите метод снижения размерности:"
             )
             if not ok:
                 return None
             config["method"] = method
             
-            # n_components selection
             max_components = len(config.get("columns", [1]))
             n_components, ok = QInputDialog.getInt(
                 self,
-                "Number of Components",
-                f"Number of dimensions to reduce to (1-{max_components}):",
+                "Количество компонент",
+                f"Число измерений для снижения (1-{max_components}):",
                 2,
                 1,
                 max_components,
@@ -451,7 +424,7 @@ class OperationsDialog(QDialog):
         if operation_id == "drop_outliers" and "method" in operation_info["params"]:
             methods = ["iqr", "zscore"]
             method, ok = self._select_from_list(
-                methods, "Select Outlier Detection Method:"
+                methods, "Выберите метод обнаружения выбросов:"
             )
             if not ok:
                 return None
@@ -460,21 +433,18 @@ class OperationsDialog(QDialog):
         return config
 
     def _select_columns(self, columns: List[str]) -> Optional[List[str]]:
-        """Show a dialog to select multiple columns with search and type badges."""
-        # Create a simple dialog with minimal chrome (no window dressing)
+        """Показать диалог выбора нескольких столбцов с поиском и типовыми метками."""
         dialog = QDialog(self)
-        dialog.setWindowTitle("Select Columns")
+        dialog.setWindowTitle("Выбор столбцов")
         dialog.resize(450, 400)
         dialog.setWindowFlags(dialog.windowFlags() & ~Qt.WindowType.WindowMaximizeButtonHint & ~Qt.WindowType.WindowMinimizeButtonHint)
         
-        # Use the improved column selector panel
         layout = QVBoxLayout(dialog)
         layout.setContentsMargins(12, 12, 12, 12)
         
         selector = ColumnSelectorPanel(columns, self.column_types, dialog)
         layout.addWidget(selector)
         
-        # Connect OK/Cancel buttons to dialog
         def on_ok_clicked():
             if selector.accepted:
                 dialog.accept()
@@ -490,32 +460,32 @@ class OperationsDialog(QDialog):
         return None
 
     def _select_single_column(self, columns: List[str]) -> Tuple[str, bool]:
-        """Show a dialog to select a single column."""
+        """Показать диалог выбора одного столбца."""
         col, ok = QInputDialog.getItem(
-            self, "Select Column", "Choose a column:", columns, 0, False
+            self, "Выбор столбца", "Выберите столбец:", columns, 0, False
         )
         return col, ok
 
     def _select_from_list(
         self, items: List[str], label: str
     ) -> Tuple[str, bool]:
-        """Show a dialog to select from a list of items."""
+        """Показать диалог выбора из списка элементов."""
         item, ok = QInputDialog.getItem(
-            self, "Select Option", label, items, 0, False
+            self, "Выбор параметра", label, items, 0, False
         )
         return item, ok
 
     def _get_float_input(self, label: str, default: float = 0.5) -> Tuple[float, bool]:
-        """Show a dialog to get a float input."""
+        """Показать диалог ввода числа с плавающей точкой."""
         value, ok = QInputDialog.getDouble(
-            self, "Input Value", label, default, 0.0, 1.0, 2
+            self, "Ввод значения", label, default, 0.0, 1.0, 2
         )
         return value, ok
 
     def _get_bool_input(self, label: str) -> bool:
-        """Show a dialog to get a boolean input."""
+        """Показать диалог для булевого ввода."""
         msg_box = QMessageBox()
-        msg_box.setWindowTitle("Confirm")
+        msg_box.setWindowTitle("Подтверждение")
         msg_box.setText(label)
         msg_box.setStandardButtons(
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
@@ -523,19 +493,19 @@ class OperationsDialog(QDialog):
         return msg_box.exec() == QMessageBox.StandardButton.Yes
 
     def _remove_operation(self):
-        """Remove the selected operation from the sequence."""
+        """Удалить выбранную операцию из последовательности."""
         current_row = self.sequence_table.currentRow()
         if current_row < 0:
-            QMessageBox.warning(self, "Warning", "Select an operation to remove.")
+            QMessageBox.warning(self, "Предупреждение", "Выберите операцию для удаления.")
             return
 
         del self.operations_sequence[current_row]
         self._update_sequence_table()
 
     def _clear_operations(self):
-        """Clear all operations."""
+        """Очистить все операции."""
         reply = QMessageBox.question(
-            self, "Confirm", "Clear all operations?",
+            self, "Подтверждение", "Очистить все операции?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
         if reply == QMessageBox.StandardButton.Yes:
@@ -543,74 +513,65 @@ class OperationsDialog(QDialog):
             self._update_sequence_table()
 
     def _on_rows_moved(self):
-        """No longer needed - drag-drop disabled."""
+        """Не используется — перетаскивание отключено."""
         pass
     
     def _move_operation_up(self, idx: int):
-        """Move operation up in the sequence."""
+        """Переместить операцию вверх по последовательности."""
         if idx > 0:
             self.operations_sequence[idx], self.operations_sequence[idx - 1] = \
                 self.operations_sequence[idx - 1], self.operations_sequence[idx]
             self._update_sequence_table()
-            # Select the moved row
             self.sequence_table.selectRow(idx - 1)
     
     def _move_operation_down(self, idx: int):
-        """Move operation down in the sequence."""
+        """Переместить операцию вниз по последовательности."""
         if idx < len(self.operations_sequence) - 1:
             self.operations_sequence[idx], self.operations_sequence[idx + 1] = \
                 self.operations_sequence[idx + 1], self.operations_sequence[idx]
             self._update_sequence_table()
-            # Select the moved row
             self.sequence_table.selectRow(idx + 1)
     
     def _update_sequence_table(self):
-        """Update the operations sequence table."""
+        """Обновить таблицу последовательности операций."""
         self.sequence_table.setRowCount(len(self.operations_sequence))
 
         for idx, op in enumerate(self.operations_sequence):
             op_id = op["operation"]
             op_info = self.OPERATIONS[op_id]
 
-            # Column 0: Number
             num_item = QTableWidgetItem(str(idx + 1))
             num_item.setFlags(num_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.sequence_table.setItem(idx, 0, num_item)
 
-            # Column 1: Operation name
             name_item = QTableWidgetItem(op_info["name"])
             name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.sequence_table.setItem(idx, 1, name_item)
 
-            # Column 2: Configuration
             config_str = self._format_config(op["config"])
             config_item = QTableWidgetItem(config_str)
             config_item.setFlags(config_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.sequence_table.setItem(idx, 2, config_item)
 
-            # Column 3: Actions buttons
             actions_widget = QWidget()
             actions_layout = QHBoxLayout(actions_widget)
             actions_layout.setContentsMargins(2, 2, 2, 2)
             actions_layout.setSpacing(4)
             
-            # Move up button
             up_btn = QPushButton("↑")
             up_btn.setMaximumWidth(30)
-            up_btn.setToolTip("Move up")
+            up_btn.setToolTip("Переместить вверх")
             up_btn.setEnabled(idx > 0)
             up_btn.clicked.connect(lambda checked, i=idx: self._move_operation_up(i))
             
-            # Move down button
             down_btn = QPushButton("↓")
             down_btn.setMaximumWidth(30)
-            down_btn.setToolTip("Move down")
+            down_btn.setToolTip("Переместить вниз")
             down_btn.setEnabled(idx < len(self.operations_sequence) - 1)
             down_btn.clicked.connect(lambda checked, i=idx: self._move_operation_down(i))
             
-            # Remove button
-            remove_btn = QPushButton("Remove")
-            remove_btn.setMaximumWidth(70)
+            remove_btn = QPushButton("Удалить")
+            remove_btn.setMaximumWidth(80)
             remove_btn.clicked.connect(lambda checked, i=idx: self._remove_operation_at(i))
             
             actions_layout.addWidget(up_btn)
@@ -620,13 +581,13 @@ class OperationsDialog(QDialog):
             self.sequence_table.setCellWidget(idx, 3, actions_widget)
 
     def _remove_operation_at(self, idx: int):
-        """Remove operation at specific index."""
+        """Удалить операцию по конкретному индексу."""
         if 0 <= idx < len(self.operations_sequence):
             del self.operations_sequence[idx]
             self._update_sequence_table()
 
     def _format_config(self, config: Dict) -> str:
-        """Format configuration dict as readable string."""
+        """Форматировать словарь конфигурации в читаемую строку."""
         parts = []
         for key, value in config.items():
             if isinstance(value, list):
@@ -634,39 +595,37 @@ class OperationsDialog(QDialog):
                 if len(value) > 3:
                     value_str += "..."
             elif isinstance(value, dict):
-                value_str = f"Dict({len(value)} items)"
+                value_str = f"Словарь({len(value)} элем.)"
             else:
                 value_str = str(value)
             parts.append(f"{key}: {value_str}")
         return " | ".join(parts)
 
     def _preview_operations(self):
-        """Preview the operations on the dataframe."""
+        """Предпросмотр операций на датафрейме."""
         if not self.operations_sequence:
-            QMessageBox.information(self, "Info", "No operations to preview.")
+            QMessageBox.information(self, "Информация", "Нет операций для предпросмотра.")
             return
 
         try:
-            # Run operations synchronously
             preview_df = self.input_df.copy()
             for op in self.operations_sequence:
                 preview_df, _ = self._apply_operation(preview_df, op)
             
-            # Show preview result
-            msg = f"Preview Result:\n"
-            msg += f"Shape: {preview_df.shape}\n"
-            msg += f"Columns: {', '.join(preview_df.columns.tolist()[:5])}"
+            msg = f"Результат предпросмотра:\n"
+            msg += f"Размер: {preview_df.shape}\n"
+            msg += f"Столбцы: {', '.join(preview_df.columns.tolist()[:5])}"
             if len(preview_df.columns) > 5:
-                msg += f" ... ({len(preview_df.columns)} total)"
+                msg += f" ... ({len(preview_df.columns)} всего)"
             
-            QMessageBox.information(self, "Preview", msg)
+            QMessageBox.information(self, "Предпросмотр", msg)
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error during preview:\n\n{str(e)}")
+            QMessageBox.critical(self, "Ошибка", f"Ошибка при предпросмотре:\n\n{str(e)}")
 
     def _apply_operation(
         self, df: pd.DataFrame, op: Dict
     ) -> Tuple[pd.DataFrame, Dict]:
-        """Apply a single operation to the dataframe."""
+        """Применить одну операцию к датафрейму."""
         operation_id = op["operation"]
         config = op["config"]
 
@@ -709,16 +668,15 @@ class OperationsDialog(QDialog):
                 n_components=config.get("n_components", 2),
             )
         else:
-            raise ValueError(f"Unknown operation: {operation_id}")
+            raise ValueError(f"Неизвестная операция: {operation_id}")
 
     def _save_version(self):
-        """Apply operations and save as new version."""
+        """Применить операции и сохранить как новую версию."""
         if not self.operations_sequence:
-            QMessageBox.information(self, "Info", "No operations to apply.")
+            QMessageBox.information(self, "Информация", "Нет операций для применения.")
             return
 
         try:
-            # Run operations synchronously
             result_df = self.input_df.copy()
             result_config = []
             
@@ -726,23 +684,22 @@ class OperationsDialog(QDialog):
                 result_df, op_config = self._apply_operation(result_df, op)
                 result_config.append(op_config)
             
-            # Store results
             self.result_df = result_df
             self.result_config = result_config
             
             QMessageBox.information(
                 self,
-                "Success",
-                f"Operations applied successfully!\n"
-                f"Result shape: {self.result_df.shape}\n"
-                f"Result saved.",
+                "Успешно",
+                f"Операции применены успешно!\n"
+                f"Размер результата: {self.result_df.shape}\n"
+                f"Результат сохранён.",
             )
             self.accept()
         except Exception as e:
             QMessageBox.critical(
-                self, "Error", f"Error applying operations:\n\n{str(e)}"
+                self, "Ошибка", f"Ошибка при применении операций:\n\n{str(e)}"
             )
     
     def get_results(self) -> Tuple[Optional[pd.DataFrame], Optional[Dict]]:
-        """Get the resulting dataframe and operation config."""
+        """Получить результирующий датафрейм и конфигурацию операций."""
         return self.result_df, self.result_config

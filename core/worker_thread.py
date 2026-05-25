@@ -42,7 +42,7 @@ def _worker_process_runner(func: Callable, args: Tuple, kwargs: dict, output_que
     _cancel_event = cancel_event
     
     try:
-        output_queue.put(("status", "Starting operation..."))
+        output_queue.put(("status", "Запуск операции..."))
         output_queue.put(("progress", 0))
         
         # Add cancel checking function to kwargs
@@ -51,7 +51,7 @@ def _worker_process_runner(func: Callable, args: Tuple, kwargs: dict, output_que
         result = func(*args, **kwargs)
         
         output_queue.put(("progress", 100))
-        output_queue.put(("status", "Operation completed!"))
+        output_queue.put(("status", "Операция завершена!"))
         output_queue.put(("completed", result))
         
     except Exception as e:
@@ -133,7 +133,7 @@ class WorkerThread(QThread):
         """Request cancellation of the operation."""
         try:
             self._cancel_requested = True
-            self.status.emit("Cancelling operation...")
+            self.status.emit("Отмена операции...")
             
             # Set cancel flag first to allow graceful cancellation
             if self._cancel_flag:
@@ -151,9 +151,9 @@ class WorkerThread(QThread):
                         self._process.join(timeout=1)
                 except Exception as e:
                     # Log but don't crash if process termination fails
-                    print(f"Error terminating process: {e}")
+                    print(f"Ошибка завершения процесса: {e}")
         except Exception as e:
-            print(f"Error in request_cancel: {e}")
+            print(f"Ошибка в request_cancel: {e}")
     
     def cancel_requested(self) -> bool:
         """Check if cancellation has been requested."""
@@ -190,7 +190,7 @@ class WorkerThread(QThread):
                     break
         except Exception as e:
             if not self._cancel_requested:
-                print(f"Error monitoring queue: {e}")
+                print(f"Ошибка мониторинга очереди: {e}")
         
         # Check if process was cancelled first
         try:

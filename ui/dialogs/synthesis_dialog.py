@@ -22,39 +22,39 @@ METHOD_META = {
     "Gaussian Copula": {
         "model_type": "gaussian_copula",
         "description": (
-            "Models statistical relationships between columns using copulas. "
-            "Assumes numerical columns are approximately normally distributed after "
-            "marginal transformation. Fastest of the three methods — suitable for "
-            "structured tabular data with moderate correlations."
+            "Моделирует статистические связи между столбцами с помощью копул. "
+            "Предполагает, что числовые столбцы после маргинального преобразования "
+            "примерно нормально распределены. Самый быстрый из трёх методов, подходит "
+            "для структурированных табличных данных с умеренными корреляциями."
         ),
-        "speed": "Fast",
+        "speed": "Быстро",
     },
     "CTGAN": {
         "model_type": "ctgan",
         "description": (
-            "Generative adversarial network trained on tabular data. Handles mixed "
-            "numeric/categorical columns and non-Gaussian distributions well. "
-            "Training time scales with epochs and dataset size — expect minutes "
-            "rather than seconds for large datasets."
+            "Генеративно-состязательная сеть для табличных данных. Хорошо работает "
+            "со смешанными числовыми и категориальными столбцами, а также с "
+            "ненормальными распределениями. Время обучения зависит от числа эпох "
+            "и размера датасета, на больших данных это скорее минуты, чем секунды."
         ),
-        "speed": "Slow",
+        "speed": "Медленно",
     },
     "TVAE": {
         "model_type": "tvae",
         "description": (
-            "Variational autoencoder variant optimised for tabular data. Encodes rows "
-            "into a latent space then decodes synthetic samples. Generally faster than "
-            "CTGAN for similar quality; latent dimensions control the expressiveness "
-            "of the learned representation."
+            "Вариационный автоэнкодер, оптимизированный для табличных данных. "
+            "Кодирует строки в латентное пространство и декодирует синтетические "
+            "образцы. Обычно быстрее CTGAN при сопоставимом качестве; размерность "
+            "латентного пространства управляет выразительностью модели."
         ),
-        "speed": "Medium",
+        "speed": "Средне",
     },
 }
 
 SPEED_COLOR = {
-    "Fast": "#51cf66",
-    "Medium": "#ffd43b",
-    "Slow": "#ff6b6b",
+    "Быстро": "#51cf66",
+    "Средне": "#ffd43b",
+    "Медленно": "#ff6b6b",
 }
 
 
@@ -144,7 +144,7 @@ class SynthesisDialog(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Data Synthesis")
+        self.setWindowTitle("Синтез данных")
         self.setModal(True)
 
         screen = QApplication.primaryScreen().availableGeometry()
@@ -175,7 +175,7 @@ class SynthesisDialog(QDialog):
         self.current_df = df
         source_rows = len(df)
         self._source_rows_label.setText(
-            f"Source dataset: {source_rows:,} rows × {len(df.columns)} columns"
+            f"Исходный датасет: {source_rows:,} строк × {len(df.columns)} столбцов"
         )
         # Default synthesized row count to match source
         self.rows_spinbox.setValue(min(source_rows, 100000))
@@ -183,8 +183,8 @@ class SynthesisDialog(QDialog):
     def set_source_info(self, dataset_name: str, version_name: str) -> None:
         self._dataset_name = dataset_name
         self._version_name = version_name
-        self.setWindowTitle(f"Data Synthesis — {dataset_name} › {version_name}")
-        self._source_label.setText(f"Source: {dataset_name} › {version_name}")
+        self.setWindowTitle(f"Синтез данных - {dataset_name} > {version_name}")
+        self._source_label.setText(f"Источник: {dataset_name} > {version_name}")
 
     def get_results(self) -> tuple:
         return self.result_df, self.result_config
@@ -229,9 +229,9 @@ class SynthesisDialog(QDialog):
         source_box_layout.setContentsMargins(8, 6, 8, 6)
         source_box_layout.setSpacing(2)
 
-        self._source_label = QLabel("Source: —")
+        self._source_label = QLabel("Источник: -")
         self._source_label.setStyleSheet("color: #b0b0b0; font-size: 11px;")
-        self._source_rows_label = QLabel("Source dataset: — rows")
+        self._source_rows_label = QLabel("Исходный датасет: - строк")
         self._source_rows_label.setStyleSheet("color: #777777; font-size: 10px;")
 
         source_box_layout.addWidget(self._source_label)
@@ -239,7 +239,7 @@ class SynthesisDialog(QDialog):
         layout.addWidget(source_box)
 
         # ── Method selector ─────────────────────────────────────────
-        method_group = QGroupBox("Synthesis Method")
+        method_group = QGroupBox("Метод синтеза")
         method_layout = QVBoxLayout(method_group)
         method_layout.setSpacing(8)
 
@@ -270,7 +270,7 @@ class SynthesisDialog(QDialog):
         layout.addWidget(method_group)
 
         # ── Advanced parameters (collapsible) ────────────────────────
-        self._advanced_section = CollapsibleSection("Advanced Parameters")
+        self._advanced_section = CollapsibleSection("Расширенные параметры")
         layout.addWidget(self._advanced_section)
 
         # CTGAN params
@@ -311,26 +311,26 @@ class SynthesisDialog(QDialog):
         self._tvae_lr.setSingleStep(0.0001)
 
         # Gaussian Copula params
-        self._gc_enforce_bounds = QCheckBox("Enforce min/max bounds")
+        self._gc_enforce_bounds = QCheckBox("Соблюдать min/max границы")
         self._gc_enforce_bounds.setChecked(True)
         self._gc_enforce_bounds.setStyleSheet("color: #b0b0b0; font-size: 10px;")
 
         # Register all rows — shown/hidden as whole row widgets via _on_method_changed
         self._adv_rows = {
-            "ctgan_epochs":    ("Epochs",             self._ctgan_epochs),
-            "ctgan_batch":     ("Batch Size",         self._ctgan_batch_size),
-            "ctgan_gen_lr":    ("Generator LR",       self._ctgan_gen_lr),
-            "ctgan_disc_lr":   ("Discriminator LR",   self._ctgan_disc_lr),
-            "tvae_latent":     ("Latent Dimensions",  self._tvae_latent_dim),
-            "tvae_epochs":     ("Epochs",             self._tvae_epochs),
-            "tvae_lr":         ("Learning Rate",      self._tvae_lr),
+            "ctgan_epochs":    ("Эпохи",             self._ctgan_epochs),
+            "ctgan_batch":     ("Размер батча",         self._ctgan_batch_size),
+            "ctgan_gen_lr":    ("LR генератора",       self._ctgan_gen_lr),
+            "ctgan_disc_lr":   ("LR дискриминатора",   self._ctgan_disc_lr),
+            "tvae_latent":     ("Латентная размерность",  self._tvae_latent_dim),
+            "tvae_epochs":     ("Эпохи",             self._tvae_epochs),
+            "tvae_lr":         ("Скорость обучения",      self._tvae_lr),
             "gc_bounds":       ("",                   self._gc_enforce_bounds),
         }
         for key, (label, widget) in self._adv_rows.items():
             self._advanced_section.add_row(key, label, widget)
 
         # ── Row count ────────────────────────────────────────────────
-        rows_group = QGroupBox("Output")
+        rows_group = QGroupBox("Эпохи")
         rows_form = QFormLayout(rows_group)
         rows_form.setSpacing(8)
 
@@ -339,7 +339,7 @@ class SynthesisDialog(QDialog):
         self.rows_spinbox.setMaximum(100000)
         self.rows_spinbox.setValue(1000)
         self.rows_spinbox.setSingleStep(100)
-        rows_form.addRow("Rows to generate:", self.rows_spinbox)
+        rows_form.addRow("Строк для генерации:", self.rows_spinbox)
 
         layout.addWidget(rows_group)
         layout.addStretch()
@@ -348,7 +348,7 @@ class SynthesisDialog(QDialog):
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(8)
 
-        self.cancel_btn = QPushButton("Cancel")
+        self.cancel_btn = QPushButton("Отмена")
         self.cancel_btn.setMinimumHeight(32)
         self.cancel_btn.setStyleSheet("""
             QPushButton {
@@ -362,7 +362,7 @@ class SynthesisDialog(QDialog):
         """)
         self.cancel_btn.clicked.connect(self.reject)
 
-        self.synthesize_btn = QPushButton("Synthesize")
+        self.synthesize_btn = QPushButton("Синтезировать")
         self.synthesize_btn.setMinimumHeight(32)
         self.synthesize_btn.setStyleSheet("""
             QPushButton {
@@ -445,12 +445,12 @@ class SynthesisDialog(QDialog):
 
     def _on_synthesize(self) -> None:
         if self.current_df is None:
-            QMessageBox.warning(self, "Error", "No dataframe loaded.")
+            QMessageBox.warning(self, "Ошибка", "Датафрейм не загружен.")
             return
 
         num_rows = self.rows_spinbox.value()
         if num_rows < 1:
-            QMessageBox.warning(self, "Validation", "Row count must be at least 1.")
+            QMessageBox.warning(self, "Проверка", "Количество строк должно быть не меньше 1.")
             return
 
         mode = self.mode_combo.currentText()
@@ -469,7 +469,7 @@ class SynthesisDialog(QDialog):
         )
 
         self.progress_dialog = ProgressDialog(
-            f"Synthesizing data with {mode}…", self, allow_cancel=True
+            f"Синтез данных методом {mode}...", self, allow_cancel=True
         )
 
         self.worker.progress.connect(self.progress_dialog.set_progress)
@@ -508,14 +508,14 @@ class SynthesisDialog(QDialog):
         lines = []
         if overall is not None:
             pct = f"{overall * 100:.1f}%"
-            lines.append(f"Overall quality score: {pct}")
+            lines.append(f"Общая оценка качества: {pct}")
 
         # Property scores
         prop_names = props.get("Property", {})
         prop_scores = props.get("Score", {})
         if prop_names and prop_scores:
             lines.append("")
-            lines.append("Property scores:")
+            lines.append("Оценки свойств:")
             for idx in prop_names:
                 name = prop_names[idx]
                 score = prop_scores.get(idx)
@@ -523,11 +523,11 @@ class SynthesisDialog(QDialog):
                     lines.append(f"  {name}: {score * 100:.1f}%")
 
         lines.append("")
-        lines.append("Save this as a new version?")
+        lines.append("Сохранить как новую версию?")
 
         reply = QMessageBox.question(
             self,
-            "Synthesis Complete",
+            "Синтез завершён",
             "\n".join(lines),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
@@ -550,7 +550,7 @@ class SynthesisDialog(QDialog):
             self.progress_dialog.accept()
 
         self._cleanup_worker(request_cancel=True, timeout_ms=1000)
-        QMessageBox.information(self, "Cancelled", "Synthesis operation was cancelled.")
+        QMessageBox.information(self, "Отменено", "Операция синтеза отменена.")
         self.reject()
 
     def _on_synthesis_error(self, error_msg: str):
@@ -563,8 +563,8 @@ class SynthesisDialog(QDialog):
 
         QMessageBox.critical(
             self,
-            "Synthesis Error",
-            f"Failed to synthesize data:\n\n{error_msg}"
+            "Ошибка синтеза",
+            f"Не удалось синтезировать данные:\n\n{error_msg}"
         )
 
     # ------------------------------------------------------------------
@@ -596,4 +596,4 @@ class SynthesisDialog(QDialog):
                             self.worker._process.kill()
                             self.worker._process.join(timeout=1)
         except Exception as e:
-            print(f"Error cleaning up worker: {e}")
+            print(f"Ошибка очистки воркера: {e}")

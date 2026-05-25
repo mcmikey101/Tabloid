@@ -38,6 +38,13 @@ import pickle
 from pathlib import Path
 
 
+TASK_LABELS = {
+    "Классификация": "Classification",
+    "Регрессия": "Regression",
+    "Кластеризация": "Clustering",
+}
+
+
 class MLLabPage(QWidget):
     """
     1 Select dataset
@@ -73,7 +80,7 @@ class MLLabPage(QWidget):
         self._connect_signals()
         self._load_datasets()
         self._on_version_changed("raw")
-        self._on_task_changed("Classification")
+        self._on_task_changed("Классификация")
 
     def showEvent(self, event):
         """Refresh dataset list when page is shown."""
@@ -112,21 +119,21 @@ class MLLabPage(QWidget):
     # Dataset Selection
     # ---------------------------------------------------------
     def _create_dataset_section(self):
-        box = QGroupBox("Dataset Selection")
+        box = QGroupBox("Выбор датасета")
         layout = QFormLayout(box)
 
         self.dataset_combo = QComboBox()
         self.version_combo = QComboBox()
         self.target_combo = QComboBox()
         
-        self.feature_selection_btn = QPushButton("Select Features...")
+        self.feature_selection_btn = QPushButton("Выбрать признаки...")
         self.feature_selection_btn.clicked.connect(self._show_feature_selection_dialog)
-        self.selected_features_label = QLabel("All features selected")
+        self.selected_features_label = QLabel("Выбраны все признаки")
 
-        layout.addRow("Dataset", self.dataset_combo)
-        layout.addRow("Version", self.version_combo)
-        layout.addRow("Target Column", self.target_combo)
-        layout.addRow("Feature Columns", self.feature_selection_btn)
+        layout.addRow("Датасет", self.dataset_combo)
+        layout.addRow("Версия", self.version_combo)
+        layout.addRow("Целевой столбец", self.target_combo)
+        layout.addRow("Столбцы-признаки", self.feature_selection_btn)
         layout.addRow("", self.selected_features_label)
         
         # Initialize selected features as None (means use all)
@@ -137,23 +144,23 @@ class MLLabPage(QWidget):
     def _show_feature_selection_dialog(self):
         """Show dialog to select feature columns."""
         if self.current_df is None:
-            QMessageBox.warning(self, "Warning", "Please load a dataset version first.")
+            QMessageBox.warning(self, "Предупреждение", "Сначала загрузите версию датасета.")
             return
         
         target_col = self.target_combo.currentText()
         available_cols = [col for col in self.current_df.columns if col != target_col]
         
         if not available_cols:
-            QMessageBox.warning(self, "Warning", "No columns available for feature selection.")
+            QMessageBox.warning(self, "Предупреждение", "Нет столбцов для выбора признаков.")
             return
         
         dialog = QDialog(self)
-        dialog.setWindowTitle("Select Feature Columns")
+        dialog.setWindowTitle("Выбор столбцов-признаков")
         dialog.resize(400, 400)
         
         layout = QVBoxLayout(dialog)
         
-        label = QLabel("Select columns to use as features:\n(Uncheck to exclude a column)")
+        label = QLabel("Выберите столбцы для использования как признаки:\n(снимите флажок, чтобы исключить столбец)")
         layout.addWidget(label)
         
         list_widget = QListWidget()
@@ -170,10 +177,10 @@ class MLLabPage(QWidget):
         layout.addWidget(list_widget)
         
         button_layout = QHBoxLayout()
-        select_all_btn = QPushButton("Select All")
-        deselect_all_btn = QPushButton("Deselect All")
+        select_all_btn = QPushButton("Выбрать все")
+        deselect_all_btn = QPushButton("Снять выбор")
         ok_btn = QPushButton("OK")
-        cancel_btn = QPushButton("Cancel")
+        cancel_btn = QPushButton("Отмена")
         
         def select_all():
             for i in range(list_widget.count()):
@@ -190,7 +197,7 @@ class MLLabPage(QWidget):
                     selected.append(list_widget.item(i).text())
             
             if not selected:
-                QMessageBox.warning(dialog, "Warning", "Select at least one feature.")
+                QMessageBox.warning(dialog, "Предупреждение", "Выберите хотя бы один признак.")
                 return
             
             self.selected_features = selected
@@ -214,15 +221,15 @@ class MLLabPage(QWidget):
     def _update_feature_chips_display(self):
         """Update the feature chips display."""
         if self.selected_features is None:
-            self.selected_features_label.setText("All features selected")
+            self.selected_features_label.setText("Выбраны все признаки")
             self.selected_features_label.setStyleSheet("")
             return
         
         # Create a display string with feature names
         features_text = ", ".join(self.selected_features[:3])
         if len(self.selected_features) > 3:
-            features_text += f"... (+{len(self.selected_features) - 3} more)"
-        self.selected_features_label.setText(f"Features: {features_text}")
+            features_text += f"... (+{len(self.selected_features) - 3} ещё)"
+        self.selected_features_label.setText(f"Признаки: {features_text}")
         self.selected_features_label.setStyleSheet("color: #51cf66; font-size: 9px;")
 
     def _load_datasets(self):
@@ -251,7 +258,7 @@ class MLLabPage(QWidget):
             if selected:
                 self._on_dataset_changed(selected)
         except Exception as e:
-            print(f"Error refreshing datasets: {e}")
+            print(f"Ошибка обновления датасетов: {e}")
 
     def _on_dataset_changed(self, dataset_name):
         """Update versions when dataset changes."""
@@ -277,26 +284,26 @@ class MLLabPage(QWidget):
             self.target_combo.clear()
             self.target_combo.addItems(self.current_df.columns.tolist())
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to load version: {str(e)}")
+            QMessageBox.critical(self, "Ошибка", f"Не удалось загрузить версию: {str(e)}")
 
     # ---------------------------------------------------------
     # Model Selection
     # ---------------------------------------------------------
     def _create_model_section(self):
-        box = QGroupBox("Model Selection")
+        box = QGroupBox("Выбор модели")
         layout = QFormLayout(box)
 
         self.task_combo = QComboBox()
         self.task_combo.addItems([
-            "Classification",
-            "Regression",
-            "Clustering"
+            "Классификация",
+            "Регрессия",
+            "Кластеризация"
         ])
 
         self.model_combo = QComboBox()
 
-        layout.addRow("Task", self.task_combo)
-        layout.addRow("Model", self.model_combo)
+        layout.addRow("Задача", self.task_combo)
+        layout.addRow("Модель", self.model_combo)
 
         return box
 
@@ -304,6 +311,7 @@ class MLLabPage(QWidget):
         """Update model options based on selected task."""
         self.model_combo.clear()
         
+        internal_task = TASK_LABELS.get(task, task)
         models = {
             "Classification": [
                 "Logistic_Regression",
@@ -323,7 +331,7 @@ class MLLabPage(QWidget):
             ]
         }
         
-        self.model_combo.addItems(models.get(task, []))
+        self.model_combo.addItems(models.get(internal_task, []))
 
     def _on_model_changed(self, model): 
         """Show/hide hyperparameters based on selected model.""" 
@@ -473,11 +481,11 @@ class MLLabPage(QWidget):
     # Hyperparameters
     # ---------------------------------------------------------
     def _create_hyperparameter_section(self):
-        box = QGroupBox("Configuration")
+        box = QGroupBox("Конфигурация")
         layout = QVBoxLayout(box)
 
         # ===== Split Configuration (Global Parameters) =====
-        split_group = QGroupBox("Split Configuration")
+        split_group = QGroupBox("Разбиение данных")
         split_layout = QFormLayout(split_group)
         
         self.test_size = QDoubleSpinBox()
@@ -490,7 +498,7 @@ class MLLabPage(QWidget):
         self.random_seed.setValue(42)
         
         # Cross-validation
-        self.use_cv = QCheckBox("Use K-Fold Cross-Validation")
+        self.use_cv = QCheckBox("Использовать K-Fold кросс-валидацию")
         self.use_cv.setChecked(False)
         
         self.cv_folds = QSpinBox()
@@ -499,15 +507,15 @@ class MLLabPage(QWidget):
         self.cv_folds.setEnabled(False)
         self.use_cv.toggled.connect(self.cv_folds.setEnabled)
 
-        split_layout.addRow("Test Size", self.test_size)
-        split_layout.addRow("Random Seed", self.random_seed)
+        split_layout.addRow("Размер тестовой выборки", self.test_size)
+        split_layout.addRow("Случайное зерно", self.random_seed)
         split_layout.addRow(self.use_cv)
         split_layout.addRow("K-Folds", self.cv_folds)
         
         layout.addWidget(split_group)
         
         # ===== Model Hyperparameters =====
-        hp_group = QGroupBox("Model Hyperparameters")
+        hp_group = QGroupBox("Гиперпараметры модели")
         hp_layout = QFormLayout(hp_group)
         
         form_layout = hp_layout
@@ -517,41 +525,41 @@ class MLLabPage(QWidget):
         self.lr_c.setRange(0.001, 100.0)
         self.lr_c.setValue(1.0)
         self.lr_c.setSingleStep(0.1)
-        self.lr_c_label = QLabel("Logistic Regression - C")
+        self.lr_c_label = QLabel("Логистическая регрессия - C")
         
         self.lr_max_iter = QSpinBox()
         self.lr_max_iter.setRange(1, 10000)
         self.lr_max_iter.setValue(100)
-        self.lr_max_iter_label = QLabel("Max Iterations")
+        self.lr_max_iter_label = QLabel("Макс. итераций")
         
         self.lr_solver = QComboBox()
         self.lr_solver.addItems(["lbfgs", "liblinear", "newton-cholesky", "newton-cg", "sag", "saga"])
-        self.lr_solver_label = QLabel("Solver")
+        self.lr_solver_label = QLabel("Решатель")
         
         self.lr_penalty = QComboBox()
         self.lr_penalty.addItems(["l2", "l1", "elasticnet", "none"])
-        self.lr_penalty_label = QLabel("Penalty")
+        self.lr_penalty_label = QLabel("Штраф")
 
         # ===== Random Forest =====
         self.rf_n_estimators = QSpinBox()
         self.rf_n_estimators.setRange(10, 1000)
         self.rf_n_estimators.setValue(100)
-        self.rf_n_estimators_label = QLabel("Random Forest - n_estimators")
+        self.rf_n_estimators_label = QLabel("Случайный лес - n_estimators")
         
         self.rf_max_depth = QSpinBox()
         self.rf_max_depth.setRange(1, 100)
         self.rf_max_depth.setValue(10)
-        self.rf_max_depth_label = QLabel("Max Depth")
+        self.rf_max_depth_label = QLabel("Макс. глубина")
         
         self.rf_min_samples_split = QSpinBox()
         self.rf_min_samples_split.setRange(2, 100)
         self.rf_min_samples_split.setValue(2)
-        self.rf_min_samples_split_label = QLabel("Min Samples Split")
+        self.rf_min_samples_split_label = QLabel("Мин. объектов для split")
         
         self.rf_min_samples_leaf = QSpinBox()
         self.rf_min_samples_leaf.setRange(1, 100)
         self.rf_min_samples_leaf.setValue(1)
-        self.rf_min_samples_leaf_label = QLabel("Min Samples Leaf")
+        self.rf_min_samples_leaf_label = QLabel("Мин. объектов в листе")
 
         # ===== SVM / SVR =====
         self.svm_c = QDoubleSpinBox()
@@ -562,7 +570,7 @@ class MLLabPage(QWidget):
         
         self.svm_kernel = QComboBox()
         self.svm_kernel.addItems(["rbf", "linear", "poly", "sigmoid"])
-        self.svm_kernel_label = QLabel("Kernel")
+        self.svm_kernel_label = QLabel("Ядро")
         
         self.svm_gamma = QComboBox()
         self.svm_gamma.addItems(["scale", "auto"])
@@ -577,25 +585,25 @@ class MLLabPage(QWidget):
         self.xgb_max_depth = QSpinBox()
         self.xgb_max_depth.setRange(1, 20)
         self.xgb_max_depth.setValue(6)
-        self.xgb_max_depth_label = QLabel("Max Depth")
+        self.xgb_max_depth_label = QLabel("Макс. глубина")
         
         self.xgb_learning_rate = QDoubleSpinBox()
         self.xgb_learning_rate.setRange(0.001, 1.0)
         self.xgb_learning_rate.setValue(0.1)
         self.xgb_learning_rate.setSingleStep(0.01)
-        self.xgb_learning_rate_label = QLabel("Learning Rate")
+        self.xgb_learning_rate_label = QLabel("Скорость обучения")
         
         self.xgb_subsample = QDoubleSpinBox()
         self.xgb_subsample.setRange(0.1, 1.0)
         self.xgb_subsample.setValue(1.0)
         self.xgb_subsample.setSingleStep(0.1)
-        self.xgb_subsample_label = QLabel("Subsample")
+        self.xgb_subsample_label = QLabel("Подвыборка")
         
         self.xgb_colsample_bytree = QDoubleSpinBox()
         self.xgb_colsample_bytree.setRange(0.1, 1.0)
         self.xgb_colsample_bytree.setValue(1.0)
         self.xgb_colsample_bytree.setSingleStep(0.1)
-        self.xgb_colsample_bytree_label = QLabel("Colsample by Tree")
+        self.xgb_colsample_bytree_label = QLabel("Доля столбцов на дерево")
 
         # ===== KMeans =====
         self.kmeans_n_clusters = QSpinBox()
@@ -605,12 +613,12 @@ class MLLabPage(QWidget):
         
         self.kmeans_init = QComboBox()
         self.kmeans_init.addItems(["k-means++", "random"])
-        self.kmeans_init_label = QLabel("Init Method")
+        self.kmeans_init_label = QLabel("Метод инициализации")
         
         self.kmeans_max_iter = QSpinBox()
         self.kmeans_max_iter.setRange(1, 1000)
         self.kmeans_max_iter.setValue(300)
-        self.kmeans_max_iter_label = QLabel("Max Iterations")
+        self.kmeans_max_iter_label = QLabel("Макс. итераций")
 
         # ===== GMM =====
         self.gmm_n_components = QSpinBox()
@@ -620,7 +628,7 @@ class MLLabPage(QWidget):
         
         self.gmm_covariance_type = QComboBox()
         self.gmm_covariance_type.addItems(["full", "tied", "diag", "spherical"])
-        self.gmm_covariance_type_label = QLabel("Covariance Type")
+        self.gmm_covariance_type_label = QLabel("Тип ковариации")
         
         self.gmm_n_init = QSpinBox()
         self.gmm_n_init.setRange(1, 50)
@@ -686,7 +694,7 @@ class MLLabPage(QWidget):
 
         # Train button
         button_layout = QHBoxLayout()
-        self.train_button = QPushButton("Train Model")
+        self.train_button = QPushButton("Обучить модель")
         self.train_button.setMinimumHeight(36)
         self.train_button.setStyleSheet("""
             QPushButton {
@@ -703,7 +711,7 @@ class MLLabPage(QWidget):
         """)
         self.train_button.clicked.connect(self._on_train_clicked)
 
-        self.export_button = QPushButton("Show on Experiments Page")
+        self.export_button = QPushButton("Показать в экспериментах")
         self.export_button.setMinimumHeight(36)
         self.export_button.clicked.connect(self._on_show_experiments_clicked)
         self.export_button.setEnabled(False)
@@ -770,7 +778,7 @@ class MLLabPage(QWidget):
             Dictionary with training results
         """
         df = training_params["df"]
-        task = training_params["task"]
+        task = TASK_LABELS.get(training_params["task"], training_params["task"])
         model = training_params["model"]
         target_col = training_params["target_col"]
         
@@ -893,7 +901,7 @@ class MLLabPage(QWidget):
                     )
                     results["roc_curve_data"] = roc_data
                 except Exception as e:
-                    print(f"Could not generate ROC curve: {e}")
+                    print(f"Не удалось построить ROC-кривую: {e}")
                     results["roc_curve_data"] = None
             else:
                 metrics = evaluation.evaluate_regression(
@@ -914,15 +922,16 @@ class MLLabPage(QWidget):
     def _on_train_clicked(self):
         """Train model with selected parameters."""
         if self.current_df is None:
-            QMessageBox.warning(self, "Warning", "Please load a dataset version first.")
+            QMessageBox.warning(self, "Предупреждение", "Сначала загрузите версию датасета.")
             return
         
         task = self.task_combo.currentText()
+        internal_task = TASK_LABELS.get(task, task)
         model = self.model_combo.currentText()
         target_col = self.target_combo.currentText()
 
-        if not target_col and task != "Clustering":
-            QMessageBox.warning(self, "Warning", "Please select a target column.")
+        if not target_col and internal_task != "Clustering":
+            QMessageBox.warning(self, "Предупреждение", "Выберите целевой столбец.")
             return
 
         try:
@@ -932,7 +941,7 @@ class MLLabPage(QWidget):
             # Run training synchronously
             result = self._run_training({
                 "df": self.current_df.copy(),
-                "task": task,
+                "task": internal_task,
                 "model": model,
                 "target_col": target_col,
             })
@@ -961,8 +970,8 @@ class MLLabPage(QWidget):
             # Ask user if they want to save the experiment
             save_experiment = QMessageBox.question(
                 self,
-                "Save Experiment",
-                "Do you want to save this experiment?",
+                "Сохранить эксперимент",
+                "Сохранить этот эксперимент?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             )
             
@@ -977,7 +986,7 @@ class MLLabPage(QWidget):
                     hyperparams = self._get_current_hyperparameters()
                     
                     # Build description with training task
-                    notes = f"Training task: {task}"
+                    notes = f"Задача обучения: {task}"
                     
                     # Save experiment with model
                     experiment_id = self.experiment_manager.create_experiment(
@@ -994,44 +1003,44 @@ class MLLabPage(QWidget):
                     # Show experiment saved notification
                     QMessageBox.information(
                         self,
-                        "Experiment Saved",
-                        f"Experiment successfully saved!\n"
-                        f"Experiment ID: {experiment_id}"
+                        "Эксперимент сохранён",
+                        f"Эксперимент успешно сохранён!\n"
+                        f"ID эксперимента: {experiment_id}"
                     )
                 except Exception as e:
                     QMessageBox.warning(
                         self,
-                        "Warning",
-                        f"Model trained but failed to save experiment:\n{str(e)}\n\n"
-                        f"You can still use the model in this session."
+                        "Предупреждение",
+                        f"Модель обучена, но эксперимент не удалось сохранить:\n{str(e)}\n\n"
+                        f"Модель всё ещё доступна в текущей сессии."
                     )
             
             # Determine success message
             if result["task"] == "Clustering":
-                QMessageBox.information(self, "Success", "Clustering completed!")
+                QMessageBox.information(self, "Успех", "Кластеризация завершена!")
                 
                 # Prompt to save as version for clustering
                 save_version = QMessageBox.question(
                     self,
-                    "Save as Version",
-                    "Do you want to save this clustered dataset as a new version?",
+                    "Сохранить как версию",
+                    "Сохранить датасет с кластерами как новую версию?",
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
                 )
                 
                 if save_version == QMessageBox.StandardButton.Yes:
                     self._save_clustering_as_version(result["labels"], result["model_name"])
             else:
-                QMessageBox.information(self, "Success", "Model training completed!")
+                QMessageBox.information(self, "Успех", "Обучение модели завершено!")
         
         except Exception as e:
             self.train_button.setEnabled(True)
-            QMessageBox.critical(self, "Error", f"Error during training:\n\n{str(e)}")
+            QMessageBox.critical(self, "Ошибка", f"Ошибка при обучении:\n\n{str(e)}")
 
     # ---------------------------------------------------------
     # Metrics
     # ---------------------------------------------------------
     def _create_metrics_section(self):
-        box = QGroupBox("Model Metrics")
+        box = QGroupBox("Метрики модели")
         layout = QVBoxLayout(box)
 
         # Metrics container
@@ -1041,7 +1050,7 @@ class MLLabPage(QWidget):
         self.metrics_layout.setContentsMargins(0, 0, 0, 0)
         
         # Empty state
-        self.metrics_empty = QLabel("No model trained yet")
+        self.metrics_empty = QLabel("Модель ещё не обучена")
         self.metrics_empty.setStyleSheet("color: #999999; font-size: 10px;")
         self.metrics_layout.addWidget(self.metrics_empty)
         
@@ -1069,7 +1078,7 @@ class MLLabPage(QWidget):
                 item.widget().deleteLater()
         
         if not metrics:
-            self.metrics_empty = QLabel("No metrics available")
+            self.metrics_empty = QLabel("Метрики недоступны")
             self.metrics_empty.setStyleSheet("color: #999999; font-size: 10px;")
             self.metrics_layout.addWidget(self.metrics_empty)
             return
@@ -1117,7 +1126,7 @@ class MLLabPage(QWidget):
         layout.setSpacing(12)
         
         # Metric name
-        name_label = QLabel(f"{name}:" if not is_main else "Main Metric:")
+        name_label = QLabel(f"{name}:" if not is_main else "Главная метрика:")
         name_label.setStyleSheet("color: #b0b0b0; font-weight: bold;" if not is_main else "color: #e0e0e0; font-weight: bold; font-size: 11px;")
         layout.addWidget(name_label)
         
@@ -1153,7 +1162,7 @@ class MLLabPage(QWidget):
 
     def _save_clustering_as_version(self, labels, model_name):
         """Save clustered dataset as a new version.""" 
-        version_name, ok = QInputDialog.getText( self, "Save Version", "Enter new version name:" )
+        version_name, ok = QInputDialog.getText( self, "Сохранить версию", "Введите имя новой версии:" )
         if not ok or not version_name:
             return
 
@@ -1200,14 +1209,14 @@ class MLLabPage(QWidget):
             
             QMessageBox.information(
                 self,
-                "Success",
-                f"Clustered version '{version_name}' saved successfully!"
+                "Успех",
+                f"Версия с кластерами '{version_name}' успешно сохранена!"
             )
         except Exception as e:
             QMessageBox.critical(
                 self,
-                "Error",
-                f"Failed to save version: {str(e)}"
+                "Ошибка",
+                f"Не удалось сохранить версию: {str(e)}"
             )
 
     def _on_show_experiments_clicked(self):
