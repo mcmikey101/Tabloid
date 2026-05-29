@@ -95,19 +95,67 @@ def train_model(
     random_seed: Optional[int] = None,
     **model_kwargs: Any,
 ):
-
+    """
+    Train a machine learning model.
+    
+    Args:
+        df: Input dataframe with features and target
+        target_column: Name of target column
+        task_type: "classification" or "regression"
+        model_type: Type of model (e.g., "random_forest", "logistic_regression")
+        test_size: Proportion of data for testing (0.0-1.0)
+        random_seed: Random seed for reproducibility
+        **model_kwargs: Additional model-specific hyperparameters
+    
+    Raises:
+        ValueError: If data is invalid or target column not found
+    """
+    # Validate inputs
     if target_column not in df.columns:
         raise ValueError(f"Целевой столбец '{target_column}' не найден.")
-
+    
+    if len(df) == 0:
+        raise ValueError("DataFrame пуст.")
+    
+    # Validate test_size
+    if not 0.0 < test_size < 1.0:
+        raise ValueError(f"test_size должна быть между 0 и 1, получено {test_size}")
+    
+    # Ensure we have enough samples for train/test split
+    min_test_samples = max(1, int(len(df) * test_size))
+    min_train_samples = 1
+    if len(df) - min_test_samples < min_train_samples:
+        raise ValueError(
+            f"Недостаточно данных для test_size={test_size}. "
+            f"Требуется минимум {min_test_samples + min_train_samples} образцов, получено {len(df)}."
+        )
+    
     X = df.drop(columns=[target_column])
     y = df[target_column]
-
+    
+    # Validate target column
+    if y.isna().all():
+        raise ValueError(f"Целевой столбец '{target_column}' содержит только NaN.")
+    
+    if len(y.dropna()) == 0:
+        raise ValueError(f"Целевой столбец '{target_column}' не содержит допустимых значений.")
+    
+    # Prepare stratify argument for classification
+    stratify_arg = None
+    if task_type.lower() == "classification":
+        # Only use stratify if there are enough samples per class
+        y_clean = y.dropna()
+        if len(y_clean.unique()) >= 2:
+            # Check that each class has at least 2 samples
+            if (y_clean.value_counts() >= 2).all():
+                stratify_arg = y
+    
     X_train, X_test, y_train, y_test = train_test_split(
         X,
         y,
         test_size=test_size,
         random_state=random_seed,
-        stratify=y if task_type == "classification" else None,
+        stratify=stratify_arg,
     )
 
     model = _create_model(

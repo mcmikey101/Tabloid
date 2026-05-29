@@ -112,13 +112,61 @@ def generate_synthetic_data(
     num_rows: int,
     cancel_requested_func: Optional[Callable[[], bool]] = None,
 ) -> Tuple[pd.DataFrame, Dict]:
-
+    """
+    Generate synthetic data from a trained synthesizer.
+    
+    For large datasets, generates data in chunks to avoid memory issues.
+    
+    Args:
+        synthesizer: Trained synthesizer model
+        num_rows: Number of rows to generate
+        cancel_requested_func: Function to check if operation is cancelled
+    
+    Returns:
+        Tuple of (synthetic_dataframe, config_dict)
+    
+    Raises:
+        CancellationException: If operation is cancelled
+    """
     # Check for cancellation before generating
     if cancel_requested_func and cancel_requested_func():
         raise CancellationException("Генерация данных отменена пользователем")
-
-    synthetic_df = synthesizer.sample(num_rows)
-
+    
+    # Generate data in chunks to avoid memory issues with large datasets
+    CHUNK_SIZE = 50000
+    
+    if num_rows <= CHUNK_SIZE:
+        # Small dataset - generate at once
+        synthetic_df = synthesizer.sample(num_rows)
+    else:
+        # Large dataset - generate in chunks
+        chunks = []
+        rows_generated = 0
+        
+        while rows_generated < num_rows:
+            # Check for cancellation periodically
+            if cancel_requested_func and cancel_requested_func():
+                raise CancellationException("Генерация данных отменена пользователем")
+            
+            # Calculate chunk size (last chunk may be smaller)
+            chunk_size = min(CHUNK_SIZE, num_rows - rows_generated)
+            
+            try:
+                chunk = synthesizer.sample(chunk_size)
+                chunks.append(chunk)
+                rows_generated += chunk_size
+            except Exception as e:
+                # If chunked generation fails, fallback to single generation
+                # (Some synthesizers may not handle chunking well)
+                if len(chunks) == 0:
+                    # First chunk failed - try generating all at once
+                    synthetic_df = synthesizer.sample(num_rows)
+                    break
+                raise e
+        else:
+            # Successfully generated all chunks
+            synthetic_df = pd.concat(chunks, ignore_index=True)
+    
     # Check for cancellation after generating
     if cancel_requested_func and cancel_requested_func():
         raise CancellationException("Генерация данных отменена пользователем")

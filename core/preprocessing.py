@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple, Optional
 import numpy as np
 
 import pandas as pd
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 
@@ -92,6 +92,8 @@ def drop_outliers(df: pd.DataFrame, columns: list = None, method: str = "iqr", t
     rows_before = len(df_copy)
     
     if method == "iqr":
+        # Build mask for all columns at once to avoid multiple filter operations
+        mask = pd.Series([True] * len(df_copy), index=df_copy.index)
         for col in columns:
             if col in df_copy.columns:
                 Q1 = df_copy[col].quantile(0.25)
@@ -99,14 +101,23 @@ def drop_outliers(df: pd.DataFrame, columns: list = None, method: str = "iqr", t
                 IQR = Q3 - Q1
                 lower_bound = Q1 - threshold * IQR
                 upper_bound = Q3 + threshold * IQR
-                df_copy = df_copy[(df_copy[col] >= lower_bound) & (df_copy[col] <= upper_bound)]
+                col_mask = (df_copy[col] >= lower_bound) & (df_copy[col] <= upper_bound)
+                mask &= col_mask
+        df_copy = df_copy[mask]
     
     elif method == "zscore":
         from scipy import stats
+        # Build mask for all columns at once
+        mask = pd.Series([True] * len(df_copy), index=df_copy.index)
         for col in columns:
             if col in df_copy.columns:
-                z_scores = stats.zscore(df_copy[col].dropna())
-                df_copy = df_copy[(stats.zscore(df_copy[col].fillna(df_copy[col].mean())).abs() <= threshold)]
+                # Handle NaN values properly by filling them
+                col_filled = df_copy[col].fillna(df_copy[col].mean())
+                z_scores = np.abs(stats.zscore(col_filled, nan_policy='propagate'))
+                # Treat NaN as outliers (False in mask)
+                col_mask = ~np.isnan(z_scores) & (z_scores <= threshold)
+                mask &= col_mask
+        df_copy = df_copy[mask]
     
     rows_after = len(df_copy)
     
@@ -137,10 +148,38 @@ def drop_columns(
     return df_copy, config
 
 def drop_high_corr_features(df, threshold=0.8):
-    corr = df.corr(numeric_only=True).abs()
-    upper = corr.where(~np.tril(np.ones(corr.shape)).astype(bool))
+    """
+    Drop features that have high correlation with each other.
     
-    to_drop = [col for col in upper.columns if any(upper[col] > threshold)]
+    Args:
+        df: Input dataframe
+        threshold: Correlation threshold for dropping (default 0.8)
+    
+    Returns:
+        DataFrame with highly correlated features removed and config dict
+    """
+    # Only work with numeric columns
+    numeric_df = df.select_dtypes(include=['number'])
+    
+    if numeric_df.shape[1] == 0:
+        # No numeric columns to correlate
+        return df.copy(), {
+            "operation": "drop_high_corr_features",
+            "threshold": threshold,
+            "dropped_columns": [],
+        }
+    
+    corr = numeric_df.corr().abs()
+    
+    # Get upper triangle of correlation matrix (avoid duplicates)
+    upper = corr.where(~np.tril(np.ones(corr.shape), k=0).astype(bool))
+    
+    # Find columns to drop (properly handle NaN values)
+    to_drop = []
+    for col in upper.columns:
+        # Use fillna(False) to treat NaN as non-correlated
+        if (upper[col] > threshold).fillna(False).any():
+            to_drop.append(col)
 
     config = {
         "operation": "drop_high_corr_features",
@@ -148,7 +187,7 @@ def drop_high_corr_features(df, threshold=0.8):
         "dropped_columns": to_drop,
     }
     
-    return df.drop(columns=to_drop), config
+    return df.drop(columns=to_drop, errors='ignore'), config
 
 
 # ----------------------------------------------------------------------
@@ -172,7 +211,9 @@ def standard_scale(
         print(f"Предупреждение: столбцы {missing} не найдены в датафрейме. Масштабируются только существующие столбцы.")
     
     scaler = StandardScaler()
-    df_copy[existing_columns] = scaler.fit_transform(df_copy[existing_columns])
+    # Preserve index when transforming
+    scaled_values = scaler.fit_transform(df_copy[existing_columns])
+    df_copy[existing_columns] = scaled_values
 
     config = {
         "operation": "standard_scale",
@@ -203,10 +244,52 @@ def minmax_scale(
         print(f"Предупреждение: столбцы {missing} не найдены в датафрейме. Масштабируются только существующие столбцы.")
     
     scaler = MinMaxScaler()
-    df_copy[existing_columns] = scaler.fit_transform(df_copy[existing_columns])
+    # Preserve index when transforming
+    scaled_values = scaler.fit_transform(df_copy[existing_columns])
+    df_copy[existing_columns] = scaled_values
 
     config = {
         "operation": "minmax_scale",
+        "columns": existing_columns,
+    }
+
+    return df_copy, config
+
+
+def robust_scale(
+    df: pd.DataFrame,
+    columns: List[str],
+) -> Tuple[pd.DataFrame, Dict]:
+    """
+    Scale features using robust methods resistant to outliers.
+    Uses median and interquartile range instead of mean and std.
+    
+    Args:
+        df: Input dataframe
+        columns: List of columns to scale
+    
+    Returns:
+        Scaled dataframe and config dict
+    """
+    df_copy = df.copy()
+    
+    # Filter to only existing columns
+    existing_columns = [col for col in columns if col in df_copy.columns]
+    
+    if not existing_columns:
+        raise ValueError(f"Ни один из указанных столбцов {columns} не найден в датафрейме.")
+    
+    if len(existing_columns) < len(columns):
+        missing = [col for col in columns if col not in df_copy.columns]
+        print(f"Предупреждение: столбцы {missing} не найдены в датафрейме. Масштабируются только существующие столбцы.")
+    
+    scaler = RobustScaler()
+    # Preserve index when transforming
+    scaled_values = scaler.fit_transform(df_copy[existing_columns])
+    df_copy[existing_columns] = scaled_values
+
+    config = {
+        "operation": "robust_scale",
         "columns": existing_columns,
     }
 

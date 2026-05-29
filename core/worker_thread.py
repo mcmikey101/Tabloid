@@ -18,15 +18,6 @@ class WorkerProcessException(Exception):
     pass
 
 
-# Global for inter-process communication
-_cancel_event: Optional[mp.Event] = None
-
-
-def _check_cancellation():
-    """Check if cancellation has been requested."""
-    return _cancel_event is not None and _cancel_event.is_set()
-
-
 def _worker_process_runner(func: Callable, args: Tuple, kwargs: dict, output_queue: mp.Queue, cancel_event: mp.Event):
     """
     Run a function in a separate process and communicate results via queue.
@@ -38,15 +29,13 @@ def _worker_process_runner(func: Callable, args: Tuple, kwargs: dict, output_que
         output_queue: Queue for sending results/status back
         cancel_event: Event to signal cancellation
     """
-    global _cancel_event
-    _cancel_event = cancel_event
-    
     try:
         output_queue.put(("status", "Запуск операции..."))
         output_queue.put(("progress", 0))
         
-        # Add cancel checking function to kwargs
-        kwargs["cancel_requested_func"] = _check_cancellation
+        # Add cancel checking function to kwargs as lambda to avoid global state
+        # This prevents memory leaks from global _cancel_event
+        kwargs["cancel_requested_func"] = lambda: cancel_event.is_set()
         
         result = func(*args, **kwargs)
         
