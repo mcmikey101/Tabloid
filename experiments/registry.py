@@ -44,10 +44,27 @@ class ExperimentManager:
         random_seed: Optional[int] = None,
         model_object: Optional[Any] = None,
         notes: Optional[str] = None,
+        experiment_name: Optional[str] = None,
+        target_column: Optional[str] = None,
+        feature_columns: Optional[list] = None,
     ) -> str:
         """
         Create and persist a new experiment record.
         Optionally saves the trained model.
+        
+        Args:
+            dataset_name: Name of the dataset
+            dataset_version: Version of the dataset
+            model_type: Type of model
+            hyperparameters: Model hyperparameters
+            metrics: Training metrics
+            preprocessing_config: Preprocessing configuration
+            random_seed: Random seed used
+            model_object: Optional trained model object to serialize
+            notes: Optional notes about the experiment
+            experiment_name: Optional user-defined name for the experiment
+            target_column: Name of the target column
+            feature_columns: List of feature column names used in training
         """
 
         experiment_id = self._generate_experiment_id()
@@ -56,6 +73,7 @@ class ExperimentManager:
 
         metadata = {
             "experiment_id": experiment_id,
+            "experiment_name": experiment_name,
             "timestamp": datetime.utcnow().isoformat(),
             "dataset": {
                 "name": dataset_name,
@@ -69,6 +87,8 @@ class ExperimentManager:
             "metrics": metrics,
             "random_seed": random_seed,
             "notes": notes,
+            "target_column": target_column,
+            "feature_columns": feature_columns or [],
         }
 
         self._save_json(exp_dir / "metadata.json", metadata)
@@ -163,10 +183,14 @@ class ExperimentManager:
                     continue
 
             experiments[exp_dir.name] = {
+                "experiment_id": metadata.get("experiment_id"),
+                "experiment_name": metadata.get("experiment_name"),
                 "timestamp": metadata.get("timestamp"),
                 "dataset": metadata.get("dataset"),
                 "model_type": metadata.get("model", {}).get("type"),
                 "metrics": metadata.get("metrics"),
+                "target_column": metadata.get("target_column"),
+                "feature_columns": metadata.get("feature_columns", []),
             }
 
         return experiments

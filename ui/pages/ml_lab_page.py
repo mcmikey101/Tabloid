@@ -332,6 +332,7 @@ class MLLabPage(QWidget):
         }
         
         self.model_combo.addItems(models.get(internal_task, []))
+        self._update_scoring_options(task)
 
     def _on_model_changed(self, model): 
         """Show/hide hyperparameters based on selected model.""" 
@@ -356,6 +357,37 @@ class MLLabPage(QWidget):
             self._show_kmeans_hyperparameters()
         elif model == "GMM":
             self._show_gmm_hyperparameters()
+    
+    def _on_gridsearch_toggled(self, checked):
+        """Enable/disable GridSearchCV related controls."""
+        self.gridsearch_scoring.setEnabled(checked)
+        self.gridsearch_scoring_label.setEnabled(checked)
+        # When GridSearchCV is enabled, adjust CV folds accordingly
+        if checked and not self.use_cv.isChecked():
+            self.use_cv.setChecked(True)
+    
+    def _update_scoring_options(self, task):
+        """Update scoring metric options based on task type."""
+        self.gridsearch_scoring.clear()
+        
+        if task == "Классификация":
+            self.gridsearch_scoring.addItems([
+                "accuracy",
+                "precision",
+                "recall", 
+                "f1",
+                "roc_auc",
+                "balanced_accuracy"
+            ])
+        elif task == "Регрессия":
+            self.gridsearch_scoring.addItems([
+                "r2",
+                "neg_mean_squared_error",
+                "neg_mean_absolute_error",
+                "neg_root_mean_squared_error"
+            ])
+        else:
+            self.gridsearch_scoring.addItems(["accuracy"])
     
     def _hide_all_hyperparameters(self):
         """Hide all model-specific hyperparameter controls."""
@@ -506,11 +538,25 @@ class MLLabPage(QWidget):
         self.cv_folds.setValue(5)
         self.cv_folds.setEnabled(False)
         self.use_cv.toggled.connect(self.cv_folds.setEnabled)
+        
+        # GridSearchCV checkbox
+        self.use_gridsearch = QCheckBox("Использовать GridSearchCV для поиска гиперпараметров")
+        self.use_gridsearch.setChecked(False)
+        self.use_gridsearch.toggled.connect(self._on_gridsearch_toggled)
+        
+        # Scoring metric for GridSearchCV
+        self.gridsearch_scoring = QComboBox()
+        self.gridsearch_scoring_label = QLabel("Метрика оптимизации")
+        self.gridsearch_scoring_label.setEnabled(False)
+        self.gridsearch_scoring.setEnabled(False)
+        self._update_scoring_options("Классификация")
 
         split_layout.addRow("Размер тестовой выборки", self.test_size)
         split_layout.addRow("Случайное зерно", self.random_seed)
         split_layout.addRow(self.use_cv)
         split_layout.addRow("K-Folds", self.cv_folds)
+        split_layout.addRow(self.use_gridsearch)
+        split_layout.addRow(self.gridsearch_scoring_label, self.gridsearch_scoring)
         
         layout.addWidget(split_group)
         
@@ -767,6 +813,51 @@ class MLLabPage(QWidget):
         
         return hyperparams
     
+    def _get_gridsearch_param_grid(self) -> dict:
+        """Generate parameter grid for GridSearchCV based on current UI values and model."""
+        model_name = self.model_combo.currentText()
+        param_grid = {}
+        
+        if model_name == "Logistic_Regression":
+            param_grid = {
+                "C": [self.lr_c.value() / 10, self.lr_c.value(), self.lr_c.value() * 10],
+                "max_iter": [self.lr_max_iter.value(), self.lr_max_iter.value() + 100],
+                "solver": [self.lr_solver.currentText()],
+                "penalty": [self.lr_penalty.currentText()]
+            }
+        
+        elif model_name == "Random_Forest":
+            param_grid = {
+                "n_estimators": [max(10, self.rf_n_estimators.value() - 50), 
+                                self.rf_n_estimators.value(), 
+                                self.rf_n_estimators.value() + 50],
+                "max_depth": [max(1, self.rf_max_depth.value() - 2), 
+                             self.rf_max_depth.value(), 
+                             self.rf_max_depth.value() + 2],
+                "min_samples_split": [self.rf_min_samples_split.value()],
+                "min_samples_leaf": [self.rf_min_samples_leaf.value()]
+            }
+        
+        elif model_name == "SVM" or model_name == "SVR":
+            param_grid = {
+                "C": [self.svm_c.value() / 10, self.svm_c.value(), self.svm_c.value() * 10],
+                "kernel": [self.svm_kernel.currentText()],
+                "gamma": [self.svm_gamma.currentText()]
+            }
+        
+        elif model_name == "XGBoost":
+            param_grid = {
+                "n_estimators": [max(10, self.xgb_n_estimators.value() - 50),
+                                self.xgb_n_estimators.value(),
+                                self.xgb_n_estimators.value() + 50],
+                "max_depth": [max(1, self.xgb_max_depth.value() - 1),
+                             self.xgb_max_depth.value(),
+                             self.xgb_max_depth.value() + 1],
+                "learning_rate": [self.xgb_learning_rate.value() / 2, self.xgb_learning_rate.value()]
+            }
+        
+        return param_grid
+    
     def _run_training(self, training_params: dict) -> dict:
         """
         Run the actual training logic. This method runs in a worker thread.
@@ -868,15 +959,30 @@ class MLLabPage(QWidget):
                 model_kwargs["subsample"] = self.xgb_subsample.value()
                 model_kwargs["colsample_bytree"] = self.xgb_colsample_bytree.value()
             
-            current_model, current_splits, config = modeling.train_model(
-                df=df,
-                target_column=target_col,
-                task_type=task_type,
-                model_type=model_type,
-                test_size=self.test_size.value(),
-                random_seed=self.random_seed.value(),
-                **model_kwargs
-            )
+            # Use GridSearchCV if enabled
+            if self.use_gridsearch.isChecked():
+                param_grid = self._get_gridsearch_param_grid()
+                current_model, current_splits, config = modeling.train_model_with_gridsearch(
+                    df=df,
+                    target_column=target_col,
+                    task_type=task_type,
+                    model_type=model_type,
+                    param_grid=param_grid,
+                    test_size=self.test_size.value(),
+                    cv_folds=self.cv_folds.value(),
+                    scoring=self.gridsearch_scoring.currentText(),
+                    random_seed=self.random_seed.value()
+                )
+            else:
+                current_model, current_splits, config = modeling.train_model(
+                    df=df,
+                    target_column=target_col,
+                    task_type=task_type,
+                    model_type=model_type,
+                    test_size=self.test_size.value(),
+                    random_seed=self.random_seed.value(),
+                    **model_kwargs
+                )
             
             if task_type == "classification":
                 metrics = evaluation.evaluate_classification(
@@ -976,11 +1082,32 @@ class MLLabPage(QWidget):
             )
             
             if save_experiment == QMessageBox.StandardButton.Yes:
+                # Ask user to name the experiment
+                experiment_name, ok = QInputDialog.getText(
+                    self,
+                    "Назвать эксперимент",
+                    "Введите название эксперимента (опционально):",
+                    text=""
+                )
+                
+                if not ok:
+                    experiment_name = None
+                elif experiment_name.strip() == "":
+                    experiment_name = None
+                
                 try:
                     dataset_name = self.dataset_combo.currentText()
                     version_name = self.version_combo.currentText()
                     model_name = result["model_name"]
                     task = result["task"]
+                    target_col = self.target_combo.currentText()
+                    
+                    # Get feature columns (either selected or all)
+                    X = result.get("splits", {})
+                    if isinstance(X, dict) and "X_test" in X:
+                        feature_columns = X["X_test"].columns.tolist()
+                    else:
+                        feature_columns = []
                     
                     # Build hyperparameters dict from UI
                     hyperparams = self._get_current_hyperparameters()
@@ -997,7 +1124,10 @@ class MLLabPage(QWidget):
                         metrics=result["metrics"],
                         random_seed=self.random_seed.value(),
                         model_object=self.current_model,
-                        notes=notes
+                        notes=notes,
+                        experiment_name=experiment_name,
+                        target_column=target_col,
+                        feature_columns=feature_columns
                     )
                     
                     # Show experiment saved notification
@@ -1126,8 +1256,8 @@ class MLLabPage(QWidget):
         layout.setSpacing(12)
         
         # Metric name
-        name_label = QLabel(f"{name}:" if not is_main else "Главная метрика:")
-        name_label.setStyleSheet("color: #b0b0b0; font-weight: bold;" if not is_main else "color: #e0e0e0; font-weight: bold; font-size: 11px;")
+        name_label = QLabel(f"{name}:")
+        name_label.setStyleSheet("color: #e0e0e0; font-weight: bold; font-size: 11px;" if is_main else "color: #b0b0b0; font-weight: bold;")
         layout.addWidget(name_label)
         
         # Format value
@@ -1136,24 +1266,13 @@ class MLLabPage(QWidget):
         else:
             value_str = str(value)
         
-        # Metric value with color indicator (for classification metrics)
+        # Metric value
         value_label = QLabel(value_str)
         value_font = QFont()
         value_font.setBold(True)
         value_font.setPointSize(11 if is_main else 10)
         value_label.setFont(value_font)
-        
-        # Color code based on accuracy/score thresholds (for metrics like accuracy, f1, etc.)
-        if isinstance(value, (int, float)) and 0 <= value <= 1:
-            if value >= 0.85:
-                color = "#51cf66"  # Green
-            elif value >= 0.70:
-                color = "#ffd43b"  # Yellow
-            else:
-                color = "#ff6b6b"  # Red
-            value_label.setStyleSheet(f"color: {color};")
-        else:
-            value_label.setStyleSheet("color: #51cf66;")
+        value_label.setStyleSheet("color: #51cf66;")
         
         layout.addWidget(value_label)
         layout.addStretch()

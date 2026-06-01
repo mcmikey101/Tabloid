@@ -17,12 +17,28 @@ from PySide6.QtWidgets import (
     QDialog,
     QInputDialog,
     QFileDialog,
-    QScrollArea
+    QScrollArea,
+    QListWidget,
+    QListWidgetItem,
+    QSplitter,
 )
 from PySide6.QtCore import Qt
+
+
+class NumericTableItem(QTableWidgetItem):
+    """Custom table item for numeric sorting."""
+    def __lt__(self, other):
+        try:
+            return float(self.text()) < float(other.text())
+        except (ValueError, TypeError):
+            return super().__lt__(other)
 from storage.file_store import FileStore
 from experiments.registry import ExperimentManager
 from core.dataset_manager import DatasetManager
+from ui.dialogs.compare_experiments_dialog import (
+    CompareExperimentsSelectionDialog,
+    CompareExperimentsResultDialog,
+)
 import pickle
 
 
@@ -108,17 +124,27 @@ class ExperimentsPage(QWidget):
         layout = QVBoxLayout(box)
 
         self.table = QTableWidget()
-        self.table.setColumnCount(6)
+        self.table.setColumnCount(8)
         self.table.setHorizontalHeaderLabels([
             "ID эксперимента",
+            "Название",
             "Датасет",
             "Версия",
             "Модель",
+            "Целевой столбец",
             "Главная метрика",
             "Дата"
         ])
 
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        self.table.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(5, QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(6, QHeaderView.ResizeToContents)
+        self.table.horizontalHeader().setSectionResizeMode(7, QHeaderView.ResizeToContents)
+        self.table.setSortingEnabled(True)
         self.table.cellClicked.connect(self._on_row_selected)
 
         layout.addWidget(self.table)
@@ -138,6 +164,10 @@ class ExperimentsPage(QWidget):
 
         # Button container
         buttons_layout = QHBoxLayout()
+        
+        self.compare_button = QPushButton("Сравнить эксперименты")
+        self.compare_button.clicked.connect(self._on_compare_clicked)
+        buttons_layout.addWidget(self.compare_button)
         
         self.export_model_button = QPushButton("Экспорт модели")
         self.export_model_button.clicked.connect(self._on_export_model_clicked)
@@ -275,11 +305,16 @@ class ExperimentsPage(QWidget):
         for row, (exp_id, data) in enumerate(experiments.items()):
             dataset = data.get("dataset", {})
             metrics = data.get("metrics", {})
+            experiment_name = data.get("experiment_name")
+            target_column = data.get("target_column", "")
 
             self.table.setItem(row, 0, QTableWidgetItem(exp_id))
-            self.table.setItem(row, 1, QTableWidgetItem(dataset.get("name", "")))
-            self.table.setItem(row, 2, QTableWidgetItem(dataset.get("version", "")))
-            self.table.setItem(row, 3, QTableWidgetItem(data.get("model_type", "")))
+            # Experiment name (show empty if not set)
+            self.table.setItem(row, 1, QTableWidgetItem(experiment_name or ""))
+            self.table.setItem(row, 2, QTableWidgetItem(dataset.get("name", "")))
+            self.table.setItem(row, 3, QTableWidgetItem(dataset.get("version", "")))
+            self.table.setItem(row, 4, QTableWidgetItem(data.get("model_type", "")))
+            self.table.setItem(row, 5, QTableWidgetItem(target_column))
             
             # Get the first metric from the metrics dictionary (works for all task types)
             # Classification: accuracy, Regression: mse, Clustering: silhouette_score
@@ -287,13 +322,16 @@ class ExperimentsPage(QWidget):
             if metrics:
                 first_metric_value = next(iter(metrics.values()))
                 main_metric = str(first_metric_value) if first_metric_value is not None else ""
-            self.table.setItem(row, 4, QTableWidgetItem(main_metric))
+            
+            # Use NumericTableItem for proper numeric sorting
+            metric_item = NumericTableItem(main_metric)
+            self.table.setItem(row, 6, metric_item)
             
             # Format timestamp
             timestamp = data.get("timestamp", "")
             if timestamp:
                 timestamp = timestamp.split("T")[0]  # Just date part
-            self.table.setItem(row, 5, QTableWidgetItem(timestamp))
+            self.table.setItem(row, 7, QTableWidgetItem(timestamp))
 
     # ---------------------------------------------------------
     # Selection & Details
@@ -321,6 +359,12 @@ class ExperimentsPage(QWidget):
         data = self.current_experiment_data
         
         lines.append(f"ID эксперимента: {data.get('experiment_id', '')}")
+        
+        # Experiment name
+        experiment_name = data.get('experiment_name')
+        if experiment_name:
+            lines.append(f"Название: {experiment_name}")
+        
         lines.append(f"Время: {data.get('timestamp', '')}")
         lines.append("")
         
@@ -329,6 +373,18 @@ class ExperimentsPage(QWidget):
         lines.append("=== Датасет ===")
         lines.append(f"Название: {dataset.get('name', '')}")
         lines.append(f"Версия: {dataset.get('version', '')}")
+        lines.append("")
+        
+        # Target column and features
+        target_column = data.get('target_column')
+        feature_columns = data.get('feature_columns', [])
+        lines.append("=== Столбцы ===")
+        if target_column:
+            lines.append(f"Целевой столбец: {target_column}")
+        if feature_columns:
+            lines.append(f"Столбцы-признаки ({len(feature_columns)}):")
+            for col in feature_columns:
+                lines.append(f"  • {col}")
         lines.append("")
         
         # Model info
@@ -465,4 +521,42 @@ class ExperimentsPage(QWidget):
                 self,
                 "Ошибка",
                 f"Не удалось удалить эксперимент:\n\n{str(e)}"
+            )
+
+    # ---------------------------------------------------------
+    # Compare Experiments
+    # ---------------------------------------------------------
+
+    def _on_compare_clicked(self):
+        """Handle compare experiments button click."""
+        try:
+            # Get all experiments
+            experiments = self.experiment_manager.list_experiments()
+            
+            if len(experiments) < 2:
+                QMessageBox.warning(
+                    self,
+                    "Недостаточно данных",
+                    "Требуется минимум 2 эксперимента для сравнения."
+                )
+                return
+            
+            # Open selection dialog
+            dialog = CompareExperimentsSelectionDialog(experiments, self)
+            if dialog.exec() == QDialog.Accepted:
+                exp1_id, exp2_id = dialog.get_selected_experiments()
+                
+                # Load experiment data
+                exp1_data = self.experiment_manager.load_experiment(exp1_id)
+                exp2_data = self.experiment_manager.load_experiment(exp2_id)
+                
+                # Open comparison window
+                compare_dialog = CompareExperimentsResultDialog(exp1_data, exp2_data, self)
+                compare_dialog.exec()
+        
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Ошибка",
+                f"Не удалось выполнить сравнение:\n\n{str(e)}"
             )

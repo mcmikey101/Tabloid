@@ -4,7 +4,7 @@ from typing import Dict, Tuple, Optional, Any
 
 import pandas as pd
 
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.svm import SVC, SVR
@@ -182,6 +182,123 @@ def train_model(
     }
 
     return model, splits, config
+
+
+# ----------------------------------------------------------------------
+# Supervised Training with GridSearchCV
+# ----------------------------------------------------------------------
+
+def train_model_with_gridsearch(
+    df: pd.DataFrame,
+    target_column: str,
+    task_type: str,
+    model_type: str,
+    param_grid: Dict[str, list],
+    test_size: float = 0.2,
+    cv_folds: int = 5,
+    scoring: Optional[str] = None,
+    random_seed: Optional[int] = None,
+):
+    """
+    Train a machine learning model using GridSearchCV for hyperparameter tuning.
+    
+    Args:
+        df: Input dataframe with features and target
+        target_column: Name of target column
+        task_type: "classification" or "regression"
+        model_type: Type of model (e.g., "random_forest", "logistic_regression")
+        param_grid: Dictionary of parameter grids to search over
+        test_size: Proportion of data for testing (0.0-1.0)
+        cv_folds: Number of cross-validation folds
+        scoring: Scoring metric (default: accuracy for classification, r2 for regression)
+        random_seed: Random seed for reproducibility
+    
+    Returns:
+        model: Best fitted model found by GridSearchCV
+        splits: Dictionary with X_test and y_test
+        config: Configuration dictionary with best parameters
+    """
+    # Validate inputs
+    if target_column not in df.columns:
+        raise ValueError(f"Целевой столбец '{target_column}' не найден.")
+    
+    if len(df) == 0:
+        raise ValueError("DataFrame пуст.")
+    
+    if not 0.0 < test_size < 1.0:
+        raise ValueError(f"test_size должна быть между 0 и 1, получено {test_size}")
+    
+    X = df.drop(columns=[target_column])
+    y = df[target_column]
+    
+    if y.isna().all():
+        raise ValueError(f"Целевой столбец '{target_column}' содержит только NaN.")
+    
+    if len(y.dropna()) == 0:
+        raise ValueError(f"Целевой столбец '{target_column}' не содержит допустимых значений.")
+    
+    # Prepare stratify argument for classification
+    stratify_arg = None
+    if task_type.lower() == "classification":
+        y_clean = y.dropna()
+        if len(y_clean.unique()) >= 2:
+            if (y_clean.value_counts() >= 2).all():
+                stratify_arg = y
+    
+    X_train, X_test, y_train, y_test = train_test_split(
+        X,
+        y,
+        test_size=test_size,
+        random_state=random_seed,
+        stratify=stratify_arg,
+    )
+    
+    # Set default scoring if not provided
+    if scoring is None:
+        scoring = "accuracy" if task_type.lower() == "classification" else "r2"
+    
+    # Create base model
+    base_model = _create_model(
+        model_type=model_type,
+        task_type=task_type,
+        random_seed=random_seed,
+    )
+    
+    # Perform GridSearchCV
+    grid_search = GridSearchCV(
+        estimator=base_model,
+        param_grid=param_grid,
+        cv=cv_folds,
+        scoring=scoring,
+        n_jobs=-1,
+        verbose=1
+    )
+    
+    grid_search.fit(X_train, y_train)
+    
+    config = {
+        "operation": "train_model_with_gridsearch",
+        "task_type": task_type,
+        "model_type": model_type,
+        "target_column": target_column,
+        "random_seed": random_seed,
+        "best_params": grid_search.best_params_,
+        "best_score": float(grid_search.best_score_),
+        "cv_folds": cv_folds,
+        "scoring": scoring,
+        "grid_search_results": {
+            "mean_test_score": grid_search.cv_results_["mean_test_score"].tolist(),
+            "std_test_score": grid_search.cv_results_["std_test_score"].tolist(),
+            "params": [str(p) for p in grid_search.cv_results_["params"]],
+        }
+    }
+    
+    splits = {
+        "X_test": X_test,
+        "y_test": y_test,
+    }
+    
+    return grid_search.best_estimator_, splits, config
 
 
 # ----------------------------------------------------------------------

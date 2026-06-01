@@ -71,7 +71,7 @@ class DatasetsPage(QWidget):
         version_widget = self._create_version_section()
         splitter.addWidget(version_widget)
 
-        splitter.setSizes([1, 2, 1])  # Proportional: 1:2:1 ratio for responsive scaling
+        splitter.setSizes([1, 3, 1])  # Proportional: 1:3:1 ratio (datasets:data:versions)
         splitter.setCollapsible(0, True)  # Allow sidebar collapse on small screens
         splitter.setCollapsible(2, True)  # Allow version tree collapse on small screens
 
@@ -196,28 +196,55 @@ class DatasetsPage(QWidget):
         center = QWidget()
         layout = QVBoxLayout(center)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(4)
+        layout.setSpacing(0)
 
         self.data_table = DataTableWidget()
         self.column_stats = ColumnStatsWidget()
         self.distribution_plot = DistributionPlotWidget()
 
-        # Create scroll area for proper overflow handling on small screens
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setStyleSheet("QScrollArea { background-color: #262738; border: none; }")
-        
-        scroll_content = QWidget()
-        scroll_layout = QVBoxLayout(scroll_content)
-        scroll_layout.setContentsMargins(0, 0, 0, 0)
-        scroll_layout.setSpacing(4)
-        
-        scroll_layout.addWidget(self.data_table)
-        scroll_layout.addWidget(self.column_stats)
-        scroll_layout.addWidget(self.distribution_plot)
-        
-        scroll.setWidget(scroll_content)
-        layout.addWidget(scroll)
+        # Create splitter for resizable stats/distribution panel
+        stats_detail_splitter = QSplitter(Qt.Vertical)
+        stats_detail_splitter.addWidget(self.column_stats)
+        stats_detail_splitter.addWidget(self.distribution_plot)
+        stats_detail_splitter.setSizes([1, 1])  # Equal height by default
+        stats_detail_splitter.setCollapsible(0, True)
+        stats_detail_splitter.setCollapsible(1, True)
+        # Style the splitter handle to show a thin line indicator
+        stats_detail_splitter.setHandleWidth(1)
+        stats_detail_splitter.setStyleSheet("""
+            QSplitter::handle:vertical {
+                background-color: #3a3d4a;
+                border: none;
+                margin: 2px 0px;
+                padding: 0px;
+            }
+            QSplitter::handle:vertical:hover {
+                background-color: #5b7cfa;
+            }
+        """)
+
+        # Create splitter for data table and stats panel
+        stats_splitter = QSplitter(Qt.Vertical)
+        stats_splitter.addWidget(self.data_table)
+        stats_splitter.addWidget(stats_detail_splitter)
+        stats_splitter.setSizes([2, 1])  # Data table 2 parts, stats 1 part
+        stats_splitter.setCollapsible(0, False)
+        stats_splitter.setCollapsible(1, True)
+        # Style the main splitter handle
+        stats_splitter.setHandleWidth(1)
+        stats_splitter.setStyleSheet("""
+            QSplitter::handle:vertical {
+                background-color: #3a3d4a;
+                border: none;
+                margin: 2px 0px;
+                padding: 0px;
+            }
+            QSplitter::handle:vertical:hover {
+                background-color: #5b7cfa;
+            }
+        """)
+
+        layout.addWidget(stats_splitter)
 
         return center
 
