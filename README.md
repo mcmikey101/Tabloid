@@ -5,7 +5,6 @@
 Создать виртуальное окружение:
 
 ```powershell
-Rename-Item .venv .venv_old
 py -3.10 -m venv .venv
 ```
 
