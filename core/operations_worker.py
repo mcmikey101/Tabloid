@@ -76,6 +76,14 @@ def apply_single_operation(
             method=config.get("method", "pca"),
             n_components=config.get("n_components", 2),
         )
+    elif operation_id == "oversample_classes":
+        return preprocessing.oversample_classes(
+            df,
+            class_column=config["class_column"],
+            target_proportions=config["target_proportions"],
+            method=config.get("method", "sample"),
+            synthesis_model=config.get("synthesis_model", "gaussian_copula"),
+        )
     else:
         raise ValueError(f"Неизвестная операция: {operation_id}")
 

@@ -1,6 +1,7 @@
 # core/preprocessing.py
 
 from typing import Dict, List, Tuple, Optional
+import math
 
 import numpy as np
 
@@ -48,16 +49,21 @@ def handle_missing_values(
             if col not in df_copy.columns:
                 continue
 
-            if strategy == "mean":
+            if strategy in {"mean", "median"} and not pd.api.types.is_numeric_dtype(df_copy[col]):
+                mode_values = df_copy[col].mode(dropna=True)
+                value = mode_values.iloc[0] if not mode_values.empty else None
+            elif strategy == "mean":
                 value = df_copy[col].mean()
             elif strategy == "median":
                 value = df_copy[col].median()
             elif strategy == "mode":
-                value = df_copy[col].mode().iloc[0] if not df_copy[col].mode().empty else None
+                mode_values = df_copy[col].mode(dropna=True)
+                value = mode_values.iloc[0] if not mode_values.empty else None
             else:
                 raise ValueError("Неподдерживаемая стратегия обработки пропусков.")
 
-            df_copy[col] = df_copy[col].fillna(value)
+            if value is not None:
+                df_copy[col] = df_copy[col].fillna(value)
 
     config = {
         "operation": "handle_missing_values",
@@ -188,6 +194,147 @@ def drop_high_corr_features(df, threshold=0.8):
     }
     
     return df.drop(columns=to_drop, errors='ignore'), config
+
+
+# ----------------------------------------------------------------------
+# Class Oversampling
+# ----------------------------------------------------------------------
+
+def _normalize_class_proportions(
+    proportions: Dict,
+    classes: List,
+) -> Dict:
+    normalized = {}
+    total = 0.0
+
+    for class_value in classes:
+        raw_value = proportions.get(class_value, proportions.get(str(class_value), 0))
+        value = float(raw_value)
+        if value < 0:
+            raise ValueError("Пропорции классов не могут быть отрицательными.")
+        normalized[class_value] = value
+        total += value
+
+    if total <= 0:
+        raise ValueError("Укажите положительную пропорцию хотя бы для одного класса.")
+
+    return {class_value: value / total for class_value, value in normalized.items()}
+
+
+def _calculate_oversample_targets(
+    class_counts: pd.Series,
+    target_proportions: Dict,
+) -> Dict:
+    classes = class_counts.index.tolist()
+    proportions = _normalize_class_proportions(target_proportions, classes)
+
+    for class_value in classes:
+        if class_counts[class_value] > 0 and proportions[class_value] <= 0:
+            raise ValueError(
+                f"Для класса '{class_value}' нельзя задать нулевую долю без удаления исходных строк."
+            )
+
+    target_total = max(
+        math.ceil(class_counts[class_value] / proportions[class_value])
+        for class_value in classes
+        if proportions[class_value] > 0
+    )
+
+    target_counts = {
+        class_value: max(
+            int(class_counts[class_value]),
+            math.ceil(target_total * proportions[class_value]),
+        )
+        for class_value in classes
+    }
+
+    return target_counts
+
+
+def oversample_classes(
+    df: pd.DataFrame,
+    class_column: str,
+    target_proportions: Dict,
+    method: str = "sample",
+    synthesis_model: str = "gaussian_copula",
+    random_seed: Optional[int] = 42,
+) -> Tuple[pd.DataFrame, Dict]:
+    """
+    Increase class counts to approach target proportions without removing original rows.
+
+    method:
+        - "sample": duplicate rows from the original dataset with replacement
+        - "synthesis": generate additional rows per class using core.synthesis
+    """
+    if class_column not in df.columns:
+        raise ValueError(f"Столбец класса '{class_column}' не найден.")
+
+    if df.empty:
+        raise ValueError("DataFrame пуст.")
+
+    method = method.lower()
+    if method not in {"sample", "synthesis"}:
+        raise ValueError("Метод oversample должен быть 'sample' или 'synthesis'.")
+
+    df_copy = df.copy()
+    class_counts = df_copy[class_column].value_counts(dropna=False)
+    if len(class_counts) < 2:
+        raise ValueError("Для oversample нужно минимум два класса.")
+
+    target_counts = _calculate_oversample_targets(class_counts, target_proportions)
+    generated_parts = [df_copy]
+    rows_added_by_class = {}
+
+    for class_value, current_count in class_counts.items():
+        rows_to_add = target_counts[class_value] - int(current_count)
+        rows_added_by_class[str(class_value)] = rows_to_add
+
+        if rows_to_add <= 0:
+            continue
+
+        class_df = df_copy[df_copy[class_column] == class_value]
+
+        if method == "sample":
+            sampled = class_df.sample(
+                n=rows_to_add,
+                replace=True,
+                random_state=random_seed,
+            )
+            generated_parts.append(sampled)
+        else:
+            if len(class_df) < 2:
+                raise ValueError(
+                    f"Для синтетического oversample класса '{class_value}' нужно минимум 2 строки."
+                )
+            from core import synthesis
+
+            synthetic_df, _ = synthesis.synthesize(
+                df=class_df.reset_index(drop=True),
+                num_rows=rows_to_add,
+                model_type=synthesis_model,
+                evaluate=False,
+            )
+            synthetic_df[class_column] = class_value
+            generated_parts.append(synthetic_df[df_copy.columns])
+
+    result_df = pd.concat(generated_parts, ignore_index=True)
+
+    config = {
+        "operation": "oversample_classes",
+        "class_column": class_column,
+        "method": method,
+        "synthesis_model": synthesis_model if method == "synthesis" else None,
+        "target_proportions": {
+            str(key): float(value) for key, value in target_proportions.items()
+        },
+        "original_counts": {str(key): int(value) for key, value in class_counts.items()},
+        "target_counts": {str(key): int(value) for key, value in target_counts.items()},
+        "rows_added_by_class": rows_added_by_class,
+        "rows_before": len(df_copy),
+        "rows_after": len(result_df),
+    }
+
+    return result_df, config
 
 
 # ----------------------------------------------------------------------

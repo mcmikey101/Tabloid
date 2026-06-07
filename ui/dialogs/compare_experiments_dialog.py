@@ -109,7 +109,7 @@ class CompareExperimentsResultDialog(QDialog):
     HIGHER_IS_BETTER = {
         'accuracy', 'precision', 'recall', 'f1', 'f1_score', 'auc', 'roc_auc',
         'specificity', 'sensitivity', 'balanced_accuracy', 'avg_precision',
-        'scores', 'mae' # Some contexts
+        'scores' # Some contexts
     }
     
     # Metrics where lower value is better

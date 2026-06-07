@@ -44,6 +44,17 @@ TASK_LABELS = {
     "Кластеризация": "Clustering",
 }
 
+MODEL_DESCRIPTIONS = {
+    "Logistic_Regression": "Линейная модель для классификации. Хорошо подходит как быстрый базовый вариант с понятными коэффициентами.",
+    "Linear_Regression": "Простая линейная регрессия для оценки числовой цели. Лучше всего работает при почти линейной связи признаков и ответа.",
+    "Random_Forest": "Ансамбль деревьев решений. Устойчив к шуму и нелинейностям, часто даёт сильный результат без тонкой настройки.",
+    "SVM": "Метод опорных векторов для классификации. Полезен на небольших и средних наборах данных со сложной границей классов.",
+    "SVR": "Регрессионная версия метода опорных векторов. Подходит для нелинейных зависимостей на небольших и средних данных.",
+    "XGBoost": "Градиентный бустинг деревьев. Обычно точный на табличных данных, но чувствителен к настройке гиперпараметров.",
+    "KMeans": "Быстрая кластеризация вокруг центроидов. Хороша, когда кластеры компактные и заранее известна их примерная численность.",
+    "GMM": "Вероятностная кластеризация гауссовыми смесями. Подходит, когда кластеры могут иметь разную форму и пересекаться.",
+}
+
 
 class MLLabPage(QWidget):
     """
@@ -301,9 +312,13 @@ class MLLabPage(QWidget):
         ])
 
         self.model_combo = QComboBox()
+        self.model_description_label = QLabel()
+        self.model_description_label.setWordWrap(True)
+        self.model_description_label.setStyleSheet("color: #adb5bd; font-size: 10px;")
 
         layout.addRow("Задача", self.task_combo)
         layout.addRow("Модель", self.model_combo)
+        layout.addRow("", self.model_description_label)
 
         return box
 
@@ -332,12 +347,14 @@ class MLLabPage(QWidget):
         }
         
         self.model_combo.addItems(models.get(internal_task, []))
+        self._update_model_description(self.model_combo.currentText())
         self._update_scoring_options(task)
 
     def _on_model_changed(self, model): 
         """Show/hide hyperparameters based on selected model.""" 
         task = self.task_combo.currentText() 
         model_lower = model.lower()
+        self._update_model_description(model)
         
         # Hide all model-specific parameters by default
         self._hide_all_hyperparameters()
@@ -357,6 +374,10 @@ class MLLabPage(QWidget):
             self._show_kmeans_hyperparameters()
         elif model == "GMM":
             self._show_gmm_hyperparameters()
+
+    def _update_model_description(self, model):
+        """Update short description for the selected model."""
+        self.model_description_label.setText(MODEL_DESCRIPTIONS.get(model, ""))
     
     def _on_gridsearch_toggled(self, checked):
         """Enable/disable GridSearchCV related controls."""
@@ -973,6 +994,7 @@ class MLLabPage(QWidget):
                     scoring=self.gridsearch_scoring.currentText(),
                     random_seed=self.random_seed.value()
                 )
+                trained_hyperparameters = dict(config.get("best_params", {}))
             else:
                 current_model, current_splits, config = modeling.train_model(
                     df=df,
@@ -983,6 +1005,9 @@ class MLLabPage(QWidget):
                     random_seed=self.random_seed.value(),
                     **model_kwargs
                 )
+                trained_hyperparameters = dict(model_kwargs)
+            
+            trained_hyperparameters["test_size"] = self.test_size.value()
             
             if task_type == "classification":
                 metrics = evaluation.evaluate_classification(
@@ -1019,6 +1044,7 @@ class MLLabPage(QWidget):
             results["model"] = current_model
             results["splits"] = current_splits
             results["config"] = config
+            results["hyperparameters"] = trained_hyperparameters
             results["metrics"] = metrics
             results["task"] = task
             results["model_name"] = model
@@ -1109,8 +1135,8 @@ class MLLabPage(QWidget):
                     else:
                         feature_columns = []
                     
-                    # Build hyperparameters dict from UI
-                    hyperparams = self._get_current_hyperparameters()
+                    # Use the hyperparameters that were actually used by the fitted model.
+                    hyperparams = result.get("hyperparameters", self._get_current_hyperparameters())
                     
                     # Build description with training task
                     notes = f"Задача обучения: {task}"

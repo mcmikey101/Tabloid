@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QVBoxLayout,
     QHBoxLayout,
+    QFormLayout,
     QPushButton,
     QListWidget,
     QListWidgetItem,
@@ -46,6 +47,9 @@ OPERATION_GROUPS = {
     "Кодирование": [
         ("one_hot_encode", "One-Hot кодирование", "Преобразование категориальных столбцов в бинарные индикаторы (один столбец на категорию). Решает мультиколлинеарность с опцией drop_first."),
         ("encode_classes", "Кодирование классов", "Преобразование категориальных значений в числовые метки (например, A→0, B→1). Используется для порядковых данных или кодирования меток."),
+    ],
+    "Балансировка": [
+        ("oversample_classes", "Балансировка классов (oversample)", "Создать новую версию датасета с выбранной пропорцией классов через повторную выборку или синтетическую генерацию."),
     ],
     "Снижение размерности": [
         ("reduce_dimensionality", "Снижение размерности", "Уменьшение числа признаков методами PCA (линейный), t-SNE (нелинейный) или UMAP (нелинейный)"),
@@ -110,6 +114,12 @@ class OperationsDialog(QDialog):
             "requires_columns": True,
             "params": ["method", "n_components"],
             "compatible_types": ["numeric"],
+        },
+        "oversample_classes": {
+            "name": "Балансировка классов (oversample)",
+            "requires_columns": False,
+            "params": ["class_column", "target_proportions", "oversample_method"],
+            "compatible_types": ["numeric", "categorical"],
         },
     }
 
@@ -365,6 +375,9 @@ class OperationsDialog(QDialog):
         operation_info = self.OPERATIONS[operation_id]
         config = {}
 
+        if operation_id == "oversample_classes":
+            return self._configure_oversample_classes()
+
         if operation_info["requires_columns"]:
             columns = self.input_df.columns.tolist()
 
@@ -431,6 +444,114 @@ class OperationsDialog(QDialog):
             config["method"] = method 
 
         return config
+
+    def _configure_oversample_classes(self) -> Optional[Dict]:
+        """Показать настройку пропорций классов для oversample."""
+        if self.input_df is None or self.input_df.empty:
+            QMessageBox.warning(self, "Предупреждение", "Нет данных для балансировки.")
+            return None
+
+        columns = self.input_df.columns.tolist()
+        class_column, ok = self._select_single_column(columns)
+        if not ok:
+            return None
+
+        counts = self.input_df[class_column].value_counts(dropna=False)
+        if len(counts) < 2:
+            QMessageBox.warning(
+                self,
+                "Предупреждение",
+                "Для oversample нужно минимум два класса в выбранном столбце.",
+            )
+            return None
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Балансировка классов (oversample)")
+        dialog.resize(460, 360)
+
+        layout = QVBoxLayout(dialog)
+        layout.addWidget(QLabel(f"Столбец класса: {class_column}"))
+
+        method_combo = QComboBox()
+        method_combo.addItem("Повторная выборка из исходного датасета", "sample")
+        method_combo.addItem("Синтетическая генерация", "synthesis")
+
+        synthesis_model_combo = QComboBox()
+        synthesis_model_combo.addItem("Gaussian Copula", "gaussian_copula")
+        synthesis_model_combo.addItem("CTGAN", "ctgan")
+        synthesis_model_combo.addItem("TVAE", "tvae")
+        synthesis_model_combo.setEnabled(False)
+
+        method_combo.currentIndexChanged.connect(
+            lambda: synthesis_model_combo.setEnabled(method_combo.currentData() == "synthesis")
+        )
+
+        form = QFormLayout()
+        form.addRow("Метод", method_combo)
+        form.addRow("Модель синтеза", synthesis_model_combo)
+        layout.addLayout(form)
+
+        proportions_label = QLabel("Целевая пропорция классов, %:")
+        layout.addWidget(proportions_label)
+
+        proportions_form = QFormLayout()
+        spinboxes = {}
+        total_count = len(self.input_df)
+        for class_value, count in counts.items():
+            spinbox = QDoubleSpinBox()
+            spinbox.setRange(0.0, 100.0)
+            spinbox.setDecimals(2)
+            spinbox.setSingleStep(1.0)
+            spinbox.setValue(round((count / total_count) * 100, 2))
+            spinboxes[class_value] = spinbox
+            proportions_form.addRow(f"{class_value} ({count})", spinbox)
+        layout.addLayout(proportions_form)
+
+        buttons_layout = QHBoxLayout()
+        ok_btn = QPushButton("OK")
+        cancel_btn = QPushButton("Отмена")
+        buttons_layout.addStretch()
+        buttons_layout.addWidget(ok_btn)
+        buttons_layout.addWidget(cancel_btn)
+        layout.addLayout(buttons_layout)
+
+        def on_ok_clicked():
+            total = sum(spinbox.value() for spinbox in spinboxes.values())
+            if total <= 0:
+                QMessageBox.warning(dialog, "Предупреждение", "Сумма пропорций должна быть больше 0.")
+                return
+
+            zero_classes = [
+                str(class_value)
+                for class_value, spinbox in spinboxes.items()
+                if spinbox.value() <= 0
+            ]
+            if zero_classes:
+                QMessageBox.warning(
+                    dialog,
+                    "Предупреждение",
+                    "Oversample не удаляет исходные строки, поэтому доля существующего класса не может быть 0: "
+                    + ", ".join(zero_classes),
+                )
+                return
+
+            dialog.accept()
+
+        ok_btn.clicked.connect(on_ok_clicked)
+        cancel_btn.clicked.connect(dialog.reject)
+
+        if dialog.exec() != QDialog.Accepted:
+            return None
+
+        return {
+            "class_column": class_column,
+            "target_proportions": {
+                str(class_value): spinbox.value()
+                for class_value, spinbox in spinboxes.items()
+            },
+            "method": method_combo.currentData(),
+            "synthesis_model": synthesis_model_combo.currentData(),
+        }
 
     def _select_columns(self, columns: List[str]) -> Optional[List[str]]:
         """Показать диалог выбора нескольких столбцов с поиском и типовыми метками."""
@@ -666,6 +787,14 @@ class OperationsDialog(QDialog):
                 columns=config["columns"],
                 method=config.get("method", "pca"),
                 n_components=config.get("n_components", 2),
+            )
+        elif operation_id == "oversample_classes":
+            return preprocessing.oversample_classes(
+                df,
+                class_column=config["class_column"],
+                target_proportions=config["target_proportions"],
+                method=config.get("method", "sample"),
+                synthesis_model=config.get("synthesis_model", "gaussian_copula"),
             )
         else:
             raise ValueError(f"Неизвестная операция: {operation_id}")
