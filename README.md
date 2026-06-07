@@ -1,10 +1,7 @@
 **Запуск Проекта**
 
-В PowerShell:
+Версия Python: 3.10
 
-```powershell
-cd C:\Users\user\projects\Tabloid
-```
 Создать виртуальное окружение:
 
 ```powershell
